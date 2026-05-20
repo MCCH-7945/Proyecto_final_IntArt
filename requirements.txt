@@ -1,0 +1,11 @@
+opencv-python
+ultralytics
+numpy
+pandas
+scipy
+shapely
+matplotlib
+tqdm
+jsonschema
+pytest
+

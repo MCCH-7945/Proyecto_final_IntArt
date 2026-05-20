@@ -1,0 +1,16 @@
+{
+  "video_id": "jugada_001",
+  "penalty_area_polygon": [
+    [120, 520],
+    [870, 520],
+    [820, 230],
+    [170, 230]
+  ],
+  "goal_corners": {
+    "bottom_left": [410, 310],
+    "bottom_right": [720, 310],
+    "top_left": [415, 160],
+    "top_right": [715, 160]
+  }
+}
+

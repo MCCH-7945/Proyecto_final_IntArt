@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "goalkeeper-1v1-analysis"
+version = "0.1.0"
+description = "Stage 1 pipeline for goalkeeper 1v1 shot analysis."
+requires-python = ">=3.10"
+dependencies = [
+  "opencv-python",
+  "ultralytics",
+  "numpy",
+  "pandas",
+  "scipy",
+  "shapely",
+  "matplotlib",
+  "tqdm",
+  "jsonschema",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
