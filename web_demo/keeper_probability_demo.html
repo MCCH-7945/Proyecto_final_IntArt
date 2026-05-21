@@ -1,0 +1,2881 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Keeper Save Probability Demo</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #eef2f0;
+      --ink: #17201c;
+      --muted: #5f6f67;
+      --line: #cbd6d1;
+      --panel: #ffffff;
+      --field: #1f744a;
+      --field-dark: #15583a;
+      --accent: #0b6b75;
+      --danger: #b6423a;
+      --warn: #d49a1f;
+      --good: #24915c;
+      --high: #1466a8;
+      --shadow: 0 14px 40px rgba(24, 37, 31, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      height: 100%;
+      margin: 0;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+
+    body {
+      min-width: 320px;
+    }
+
+    button,
+    input,
+    select {
+      font: inherit;
+    }
+
+    .app {
+      min-height: 100%;
+      display: grid;
+      grid-template-rows: auto 1fr;
+    }
+
+    .topbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+      padding: 18px 22px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.92);
+    }
+
+    .title {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+
+    .tag {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .top-stats {
+      display: grid;
+      grid-auto-flow: column;
+      gap: 10px;
+    }
+
+    .stat {
+      min-width: 82px;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+    }
+
+    .stat span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    .stat strong {
+      display: block;
+      margin-top: 2px;
+      font-size: 18px;
+      line-height: 1.1;
+    }
+
+    .workspace {
+      width: min(1500px, 100%);
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      padding: 18px;
+      min-height: 0;
+    }
+
+    .stage {
+      min-width: 0;
+      min-height: 700px;
+      display: grid;
+      grid-template-rows: 1fr auto;
+      gap: 10px;
+    }
+
+    .canvas-shell {
+      position: relative;
+      height: min(82vh, 820px);
+      min-height: 660px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      background: #0f3f2c;
+      box-shadow: var(--shadow);
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+
+    .legend {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .legend-item {
+      display: grid;
+      grid-template-columns: 18px 1fr;
+      gap: 8px;
+      align-items: center;
+      padding: 8px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.82);
+    }
+
+    .swatch {
+      width: 18px;
+      height: 12px;
+      border-radius: 2px;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      align-content: start;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .controls .panel {
+      grid-column: span 4;
+    }
+
+    #scenarioPanel,
+    #controlGuidePanel {
+      grid-column: 1 / -1;
+    }
+
+    #modelPanel {
+      grid-column: span 8;
+    }
+
+    #shootoutPanel {
+      grid-column: span 4;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 0 6px 22px rgba(24, 37, 31, 0.07);
+      overflow: hidden;
+    }
+
+    .panel h2 {
+      margin: 0;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .panel-body {
+      display: grid;
+      gap: 12px;
+      padding: 12px 14px 14px;
+    }
+
+    .segmented {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .segmented.three {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .segmented button,
+    .action-row button {
+      min-height: 34px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+      color: var(--ink);
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .segmented button.active {
+      border-color: var(--accent);
+      background: #e5f2f2;
+      color: #073f47;
+    }
+
+    .segmented button:disabled,
+    .action-row button:disabled {
+      cursor: default;
+      opacity: 0.48;
+    }
+
+    .control {
+      display: grid;
+      gap: 6px;
+    }
+
+    .control-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      align-items: baseline;
+      font-size: 13px;
+      font-weight: 720;
+    }
+
+    .value {
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+      font-weight: 720;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .action-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .action-row button.primary {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: white;
+    }
+
+    .readout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .readout .stat {
+      min-width: 0;
+      padding: 9px 10px;
+    }
+
+    .analysis-panel {
+      box-shadow: var(--shadow);
+    }
+
+    .analysis-panel .panel-body,
+    .interpretation-panel .panel-body {
+      gap: 14px;
+    }
+
+    .interpretation-panel {
+      box-shadow: var(--shadow);
+    }
+
+    .decision-metrics {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .visual-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) minmax(0, 1fr);
+      gap: 12px;
+    }
+
+    .chart-card {
+      min-width: 0;
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+    }
+
+    .chart-card h3 {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    .chart-canvas {
+      width: 100%;
+      height: 118px;
+      border-radius: 6px;
+      background: #ffffff;
+      border: 1px solid rgba(203, 214, 209, 0.76);
+      cursor: default;
+    }
+
+    .entropy-meter {
+      position: relative;
+      height: 118px;
+      display: grid;
+      align-content: center;
+      gap: 8px;
+    }
+
+    .entropy-track {
+      position: relative;
+      height: 22px;
+      overflow: hidden;
+      border-radius: 999px;
+      border: 1px solid rgba(203, 214, 209, 0.9);
+      background: linear-gradient(90deg, #24915c 0%, #d49a1f 50%, #24915c 100%);
+    }
+
+    .entropy-fill {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 0%;
+      background: rgba(20, 102, 168, 0.32);
+      border-right: 3px solid #0b6b75;
+    }
+
+    .entropy-scale,
+    .bar-labels {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .bar-comparison {
+      display: grid;
+      gap: 10px;
+      align-content: center;
+      min-height: 118px;
+    }
+
+    .bar-row {
+      display: grid;
+      gap: 5px;
+    }
+
+    .bar-row-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .bar-track {
+      height: 18px;
+      overflow: hidden;
+      border-radius: 999px;
+      border: 1px solid rgba(203, 214, 209, 0.9);
+      background: #ffffff;
+    }
+
+    .bar-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: var(--accent);
+    }
+
+    .bar-fill.current {
+      background: var(--warn);
+    }
+
+    .bar-fill.optimal {
+      background: var(--good);
+    }
+
+    .interpretation-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+      gap: 12px;
+    }
+
+    .interpretation-copy {
+      margin: 0;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .driver-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .driver-row {
+      display: grid;
+      grid-template-columns: minmax(116px, 0.86fr) minmax(0, 1fr) 64px;
+      gap: 8px;
+      align-items: center;
+      padding: 8px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+    }
+
+    .driver-name {
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .driver-track {
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: #e8efec;
+    }
+
+    .driver-fill {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+    }
+
+    .driver-fill.positive {
+      background: var(--good);
+    }
+
+    .driver-fill.negative {
+      background: var(--danger);
+    }
+
+    .driver-value {
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .theory-list {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .theory-chip {
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #f8faf9;
+    }
+
+    .theory-chip strong {
+      display: block;
+      margin-bottom: 4px;
+      font-size: 12px;
+    }
+
+    .theory-chip span {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.35;
+    }
+
+    .guide-details summary {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+      min-height: 44px;
+      padding: 12px 14px;
+      border-bottom: 1px solid transparent;
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 800;
+      list-style: none;
+    }
+
+    .guide-details summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .guide-details summary::after {
+      content: "Abrir";
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    .guide-details[open] summary {
+      border-bottom-color: var(--line);
+    }
+
+    .guide-details[open] summary::after {
+      content: "Cerrar";
+    }
+
+    .note {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .guide-list {
+      display: grid;
+      gap: 10px;
+      margin: 0;
+    }
+
+    .guide-list div {
+      display: grid;
+      gap: 2px;
+      padding-bottom: 9px;
+      border-bottom: 1px solid rgba(203, 214, 209, 0.72);
+    }
+
+    .guide-list div:last-child {
+      padding-bottom: 0;
+      border-bottom: 0;
+    }
+
+    .guide-list dt {
+      margin: 0;
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--ink);
+    }
+
+    .guide-list dd {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.4;
+    }
+
+    .guide-kicker {
+      display: inline-block;
+      width: fit-content;
+      padding: 3px 7px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: #f8faf9;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .ml-hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        grid-template-columns: 1fr;
+      }
+
+      .top-stats {
+        grid-auto-flow: row;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .workspace {
+        padding: 12px;
+      }
+
+      .stage {
+        min-height: 620px;
+      }
+
+      .canvas-shell {
+        height: 660px;
+        min-height: 560px;
+      }
+
+      .controls {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .controls .panel,
+      #modelPanel,
+      #shootoutPanel {
+        grid-column: span 1;
+      }
+
+      #scenarioPanel,
+      #controlGuidePanel {
+        grid-column: 1 / -1;
+      }
+
+      .decision-metrics,
+      .visual-grid,
+      .interpretation-grid,
+      .theory-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        padding: 14px;
+      }
+
+      h1 {
+        font-size: 19px;
+      }
+
+      .top-stats,
+      .legend,
+      .readout,
+      .decision-metrics,
+      .visual-grid,
+      .interpretation-grid,
+      .theory-list,
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .driver-row {
+        grid-template-columns: 1fr;
+      }
+
+      .driver-value {
+        text-align: left;
+      }
+
+      .canvas-shell {
+        height: 620px;
+        min-height: 540px;
+      }
+
+      .controls .panel,
+      #modelPanel,
+      #shootoutPanel {
+        grid-column: 1 / -1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header class="topbar">
+      <div class="title">
+        <h1>Keeper Save Probability</h1>
+        <span class="tag" id="modelTag">interactive model</span>
+      </div>
+      <div class="top-stats">
+        <div class="stat">
+          <span>P parada objetivo</span>
+          <strong id="targetProb">0.0%</strong>
+        </div>
+        <div class="stat">
+          <span>P >= 0.80</span>
+          <strong id="areaHigh">0%</strong>
+        </div>
+        <div class="stat">
+          <span>P >= 0.50</span>
+          <strong id="areaMid">0%</strong>
+        </div>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="stage">
+        <div class="canvas-shell" id="canvasShell">
+          <canvas id="probCanvas" aria-label="Goalkeeper probability heatmap"></canvas>
+        </div>
+        <div class="legend">
+          <div class="legend-item"><span class="swatch" style="background:#ffd34d"></span><span>Posición tiro</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#b6423a"></span><span>Baja</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#d49a1f"></span><span>Media</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#24915c"></span><span>Alta</span></div>
+          <div class="legend-item"><span class="swatch" style="background:#1466a8"></span><span>Muy alta</span></div>
+        </div>
+      </div>
+
+      <section class="panel analysis-panel" id="decisionPanel">
+        <h2>Incertidumbre y decisión</h2>
+        <div class="panel-body">
+          <div class="decision-metrics">
+            <div class="stat"><span>MC media</span><strong id="mcMean">0.0%</strong></div>
+            <div class="stat"><span id="mcIntervalLabel">IC 90%</span><strong id="mcInterval">0-0%</strong></div>
+            <div class="stat"><span>Ancho IC</span><strong id="mcIntervalWidth">0.0 pp</strong></div>
+            <div class="stat"><span>Entropía</span><strong id="entropyBits">0.00 bits</strong></div>
+            <div class="stat"><span>Mejor posición</span><strong id="bestKeeper">U 0.50</strong></div>
+            <div class="stat"><span>Mejora esperada</span><strong id="bestGain">+0.0 pp</strong></div>
+            <div class="stat"><span>Búsqueda</span><strong id="gridSearchInfo">0 pos</strong></div>
+          </div>
+
+          <div class="segmented three" id="alphaButtons" aria-label="Nivel de confianza Monte Carlo">
+            <button type="button" data-alpha="0.1" class="active">α 0.10 / IC 90%</button>
+            <button type="button" data-alpha="0.05">α 0.05 / IC 95%</button>
+            <button type="button" data-alpha="0.01">α 0.01 / IC 99%</button>
+          </div>
+
+          <div class="visual-grid" aria-label="Visualizaciones de incertidumbre y decisión">
+            <article class="chart-card">
+              <h3>Distribución Monte Carlo</h3>
+              <canvas id="mcHistogram" class="chart-canvas" aria-label="Histograma Monte Carlo"></canvas>
+              <p class="note">Frecuencia de probabilidades simuladas cerca del punto blanco.</p>
+            </article>
+            <article class="chart-card">
+              <h3>Entropía del objetivo</h3>
+              <div class="entropy-meter">
+                <div class="entropy-track" aria-hidden="true">
+                  <div class="entropy-fill" id="entropyFill"></div>
+                </div>
+                <div class="entropy-scale"><span>0 bits</span><span>1 bit</span></div>
+                <p class="note" id="entropyText">Incertidumbre máxima cerca de 50/50.</p>
+              </div>
+            </article>
+            <article class="chart-card">
+              <h3>Actual vs óptimo</h3>
+              <div class="bar-comparison">
+                <div class="bar-row">
+                  <div class="bar-row-header"><span>Actual</span><span id="currentExpectedValue">0.0%</span></div>
+                  <div class="bar-track"><div class="bar-fill current" id="currentExpectedBar"></div></div>
+                </div>
+                <div class="bar-row">
+                  <div class="bar-row-header"><span>Óptimo refinado</span><span id="optimalExpectedValue">0.0%</span></div>
+                  <div class="bar-track"><div class="bar-fill optimal" id="optimalExpectedBar"></div></div>
+                </div>
+              </div>
+            </article>
+          </div>
+
+          <div class="action-row">
+            <button type="button" id="applyBestKeeperButton" class="primary">Aplicar óptimo</button>
+            <button type="button" id="refreshAnalysisButton">Recalcular</button>
+          </div>
+          <p class="note">Monte Carlo simula tiros cercanos al objetivo. α solo ajusta el intervalo de confianza central, no infla la probabilidad media. La optimización evalúa posiciones discretas y refina localmente la mejor, por lo que es una aproximación práctica al continuo.</p>
+        </div>
+      </section>
+
+      <section class="panel interpretation-panel" id="interpretationPanel">
+        <h2>Resultados interpretables del modelo</h2>
+        <div class="panel-body">
+          <div class="decision-metrics">
+            <div class="stat"><span>Fuente</span><strong id="modelSourceReadout">PFF</strong></div>
+            <div class="stat"><span>AUC</span><strong id="modelAucReadout">0.00</strong></div>
+            <div class="stat"><span>Brier</span><strong id="modelBrierReadout">0.000</strong></div>
+            <div class="stat"><span>Tiros</span><strong id="modelNReadout">0</strong></div>
+            <div class="stat"><span>Modelo</span><strong id="modelKindReadout">Logit</strong></div>
+            <div class="stat"><span>Estado</span><strong id="modelStatusReadout">Baseline</strong></div>
+          </div>
+
+          <div class="interpretation-grid">
+            <p class="interpretation-copy" id="interpretationNarrative">
+              El sistema combina una predicción base con una capa de incertidumbre y una búsqueda de decisión.
+            </p>
+            <div>
+              <span class="guide-kicker">Top factores actuales</span>
+              <div class="driver-list" id="driverList"></div>
+            </div>
+          </div>
+
+          <div class="theory-list">
+            <div class="theory-chip"><strong>Aprendizaje automático</strong><span>Regresión logística entrenada con tiros gol/parada.</span></div>
+            <div class="theory-chip"><strong>Monte Carlo</strong><span>Nube de tiros alrededor del objetivo; la barra de incertidumbre solo cambia su dispersión.</span></div>
+            <div class="theory-chip"><strong>Entropía</strong><span>Incertidumbre en bits de la predicción del objetivo.</span></div>
+            <div class="theory-chip"><strong>Optimización</strong><span>Grid search de la posición que maximiza P(save) esperada.</span></div>
+          </div>
+        </div>
+      </section>
+
+      <aside class="controls">
+        <section class="panel" id="scenarioPanel">
+          <h2>Escenario</h2>
+          <div class="panel-body">
+            <div class="segmented" id="scenarioButtons" style="grid-template-columns: repeat(5, minmax(0, 1fr));">
+              <button type="button" data-scenario="balanced" class="active">Base</button>
+              <button type="button" data-scenario="late">Tarde</button>
+              <button type="button" data-scenario="wide">Cruzado</button>
+              <button type="button" data-scenario="area">Área</button>
+              <button type="button" data-scenario="tanda">Tanda</button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel" id="keeperPanel">
+          <h2>Portero</h2>
+          <div class="panel-body">
+            <label class="control">
+              <span class="control-line"><span>Centro U</span><span class="value" id="keeperUValue"></span></span>
+              <input id="keeperU" type="range" min="-1.75" max="3.25" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Centro V</span><span class="value" id="keeperVValue"></span></span>
+              <input id="keeperV" type="range" min="-6.8" max="0" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Alcance lateral</span><span class="value" id="reachXValue"></span></span>
+              <input id="reachX" type="range" min="0.45" max="2.35" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Alcance vertical</span><span class="value" id="reachZValue"></span></span>
+              <input id="reachZ" type="range" min="0.35" max="1.65" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Deformacion</span><span class="value" id="deformValue"></span></span>
+              <input id="deform" type="range" min="0" max="1" step="0.01">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel" id="ballPanel">
+          <h2>Balón</h2>
+          <div class="panel-body">
+            <label class="control">
+              <span class="control-line"><span>Posición U</span><span class="value" id="ballUValue"></span></span>
+              <input id="ballU" type="range" min="-1.75" max="3.25" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Posición V</span><span class="value" id="ballVValue"></span></span>
+              <input id="ballV" type="range" min="-6.8" max="0" step="0.01">
+            </label>
+            <p class="note">Balón y portero solo dentro del área grande o del área chica (V=0 es la línea de gol). Arrastra en el canvas.</p>
+          </div>
+        </section>
+
+        <section class="panel" id="shotPanel">
+          <h2>Tiro</h2>
+          <div class="panel-body">
+            <label class="control">
+              <span class="control-line"><span>Objetivo U</span><span class="value" id="targetUValue"></span></span>
+              <input id="targetU" type="range" min="0" max="1" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Objetivo V</span><span class="value" id="targetVValue"></span></span>
+              <input id="targetV" type="range" min="0" max="1" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Tiempo al arco</span><span class="value" id="ballTimeValue"></span></span>
+              <input id="ballTime" type="range" min="0.15" max="1.25" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Reaccion</span><span class="value" id="reactionValue"></span></span>
+              <input id="reaction" type="range" min="0.15" max="0.75" step="0.01">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Velocidad</span><span class="value" id="shotSpeedValue"></span></span>
+              <input id="shotSpeed" type="range" min="45" max="125" step="1">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel" id="shootoutPanel">
+          <h2>Tanda (Apesteguia-PH 2010)</h2>
+          <div class="panel-body">
+            <label class="control">
+              <span class="control-line"><span>Contexto</span><span class="value" id="shootoutContextValue"></span></span>
+              <input id="isShootoutContext" type="range" min="0" max="1" step="1">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Equipo patea primero</span><span class="value" id="teamKicksFirstValue"></span></span>
+              <input id="teamKicksFirst" type="range" min="0" max="1" step="1">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Ronda</span><span class="value" id="shootoutRoundValue"></span></span>
+              <input id="shootoutRound" type="range" min="1" max="5" step="1">
+            </label>
+            <label class="control">
+              <span class="control-line"><span>Marcador parcial</span><span class="value" id="partialScoreValue"></span></span>
+              <input id="partialScore" type="range" min="-1" max="1" step="1">
+            </label>
+            <p class="note">Calibrado a tasas estilizadas del AER 2010: ~73% gol en tandas, ventaja del primer pateador, peor conversion si el segundo va perdiendo.</p>
+          </div>
+        </section>
+
+        <section class="panel" id="modelPanel">
+          <h2>Modelo</h2>
+          <div class="panel-body">
+            <div class="segmented">
+              <button type="button" data-model-mode="ml" class="active">Baseline ML (PFF)</button>
+              <button type="button" data-model-mode="proxy">Simulador geométrico</button>
+            </div>
+            <div class="segmented" id="proxyControls">
+              <button type="button" data-proxy="circle" class="active">Circulo</button>
+              <button type="button" data-proxy="deformable">Deformable</button>
+            </div>
+            <label class="control">
+              <span class="control-line"><span>Incertidumbre</span><span class="value" id="uncertaintyValue"></span></span>
+              <input id="uncertainty" type="range" min="0" max="1" step="0.01">
+            </label>
+            <div class="readout">
+              <div class="stat"><span>Zona 0.20</span><strong id="areaLow">0%</strong></div>
+              <div class="stat"><span>Distancia</span><strong id="targetDist">0.00m</strong></div>
+            </div>
+            <div class="action-row">
+              <button type="button" id="resetButton">Reset</button>
+              <button type="button" id="exportButton" class="primary">Export</button>
+            </div>
+            <p class="note">Portero y balón quedan limitados al rectángulo del área penal (incluye el área chica). El objetivo del tiro sigue siendo un punto dentro del marco.</p>
+            <p class="note" id="modelModeNote"></p>
+            <p class="note" id="modelNote">Baseline ML: regresion logistica. El demo carga el modelo disponible en save_probability_model.json.</p>
+            <p class="note" id="activeControlNote"></p>
+          </div>
+        </section>
+
+        <section class="panel" id="controlGuidePanel">
+          <details class="guide-details">
+            <summary>Guía de barras</summary>
+            <div class="panel-body">
+              <span class="guide-kicker">Baseline ML (PFF)</span>
+              <dl class="guide-list">
+                <div>
+                  <dt>Centro U</dt>
+                  <dd>Posición horizontal del portero. 0.50 es el centro de la portería; en ML PFF queda limitado entre los postes.</dd>
+                </div>
+                <div>
+                  <dt>Centro V</dt>
+                  <dd>Profundidad del portero respecto a la línea de gol. V=0 es la línea; en ML PFF se limita a la profundidad del área chica.</dd>
+                </div>
+                <div>
+                  <dt>Posición U / V del balón</dt>
+                  <dd>Ubicación del balón al momento del tiro dentro del sistema relativo a la portería.</dd>
+                </div>
+                <div>
+                  <dt>Objetivo U / V</dt>
+                  <dd>Punto blanco de llegada del tiro: U va de poste izquierdo a derecho, V va del suelo al travesaño.</dd>
+                </div>
+                <div>
+                  <dt>Tiempo al arco</dt>
+                  <dd>Tiempo estimado que tarda el balón en llegar a la portería desde el tiro.</dd>
+                </div>
+                <div>
+                  <dt>Incertidumbre</dt>
+                  <dd>Aumenta o reduce la dispersión de tiros simulados por Monte Carlo alrededor del objetivo; no modifica directamente la probabilidad base.</dd>
+                </div>
+                <div>
+                  <dt>Monte Carlo / Entropía / Óptimo</dt>
+                  <dd>Simulan variación del tiro, miden incertidumbre en bits y buscan una posición válida del portero con malla discreta y refinamiento local.</dd>
+                </div>
+              </dl>
+              <span class="guide-kicker">Solo simulador geométrico</span>
+              <dl class="guide-list">
+                <div>
+                  <dt>Alcance lateral / vertical</dt>
+                  <dd>Tamaño del área corporal que el portero puede cubrir en la función geométrica proxy.</dd>
+                </div>
+                <div>
+                  <dt>Deformación</dt>
+                  <dd>Expande o desplaza el proxy corporal para simular extensión del portero.</dd>
+                </div>
+                <div>
+                  <dt>Reacción y velocidad</dt>
+                  <dd>Reducen o aumentan el tiempo efectivo disponible para alcanzar el balón en el modelo geométrico.</dd>
+                </div>
+              </dl>
+            </div>
+          </details>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    const GOAL_WIDTH_M = 7.32;
+    const GOAL_HEIGHT_M = 2.44;
+    // Todas las medidas del campo se expresan respecto a la portería (ratios FIFA).
+    const PITCH_RATIOS = {
+      penaltyDepth: 16.5 / GOAL_HEIGHT_M,
+      penaltyWidth: 40.32 / GOAL_WIDTH_M,
+      goalAreaDepth: 5.5 / GOAL_HEIGHT_M,
+      goalAreaWidth: 18.32 / GOAL_WIDTH_M,
+      penaltySpot: 11.0 / GOAL_HEIGHT_M,
+      spotRadius: 0.11 / GOAL_WIDTH_M,
+      postRadius: 0.06 / GOAL_WIDTH_M,
+      lineWidth: 0.12 / GOAL_WIDTH_M
+    };
+    const GOAL_ZOOM_MAX = 0.94;
+    const FIXED_VIEW_ZOOM = 0;
+    const PENALTY_U_HALF = (PITCH_RATIOS.penaltyWidth - 1) / 2;
+    const GOAL_AREA_U_HALF = (PITCH_RATIOS.goalAreaWidth - 1) / 2;
+    const PITCH_BOUNDS = {
+      uMin: 0.5 - PENALTY_U_HALF,
+      uMax: 0.5 + PENALTY_U_HALF,
+      vMin: -PITCH_RATIOS.penaltyDepth,
+      vMax: 0
+    };
+    const GOAL_AREA_BOUNDS = {
+      uMin: 0.5 - GOAL_AREA_U_HALF,
+      uMax: 0.5 + GOAL_AREA_U_HALF,
+      vMin: -PITCH_RATIOS.goalAreaDepth,
+      vMax: 0
+    };
+    const ML_KEEPER_BOUNDS = {
+      uMin: 0,
+      uMax: 1,
+      vMin: GOAL_AREA_BOUNDS.vMin,
+      vMax: GOAL_AREA_BOUNDS.vMax
+    };
+    const SCENE_WIDTH_M = GOAL_WIDTH_M * PITCH_RATIOS.penaltyWidth;
+    const SCENE_HEIGHT_M = GOAL_HEIGHT_M * (1 + PITCH_RATIOS.penaltyDepth);
+    const SCENE_ASPECT = SCENE_HEIGHT_M / SCENE_WIDTH_M;
+    const PENALTY_MARKINGS_ZOOM = 0.72;
+    const MC_SAMPLE_COUNT = 640;
+    const OPTIMIZATION_SAMPLE_COUNT = 96;
+    const OPT_GRID_U_STEPS = 17;
+    const OPT_GRID_V_STEPS = 11;
+    const OPT_REFINE_STEPS = 13;
+    let latestAnalysis = null;
+    let TRAINED_MODEL = {
+      model_kind: "logistic_regression",
+      source: "demo_synthetic",
+      trained_on_synthetic_data: true,
+      feature_columns: [
+        "keeper_center_u",
+        "keeper_center_v",
+        "keeper_body_width",
+        "keeper_body_height",
+        "keeper_hand_span",
+        "keeper_foot_span",
+        "keeper_polygon_area_uv",
+        "keeper_pose_confidence",
+        "goal_entry_u",
+        "goal_entry_v",
+        "shot_ball_speed",
+        "time_ball_to_goal",
+        "reaction_time",
+        "lateral_delta_m",
+        "vertical_delta_m",
+        "distance_keeper_to_target_m"
+      ],
+      imputer_median: [
+        0.49144900546577347, 0.221134822376253, 0.7740771194378973,
+        1.6193868734316899, 1.8243776856916236, 0.7204007912788888,
+        0.11986049741560985, 0.7441687601854537, 0.5030004648473596,
+        0.3185140153355015, 82.72521892504977, 0.5476934851350552,
+        0.3147376096213495, 0.08130758109742141, 0.24248042207243956,
+        1.752000570061987
+      ],
+      scaler_mean: [
+        0.49505224373690865, 0.22126653272404534, 0.7751383027946182,
+        1.6182745716541118, 1.8213697938579658, 0.7182063569490895,
+        0.11982627872574203, 0.7227580034778439, 0.4991948259511045,
+        0.3523475547010091, 82.73108036488122, 0.5535385428119558,
+        0.31630312558931656, 0.03032370180791301, 0.3198376936237917,
+        1.92340750059246
+      ],
+      scaler_scale: [
+        0.138980037321034, 0.05994471376579693, 0.13444616134576456,
+        0.18063832620283385, 0.3179634145840727, 0.1604563692034244,
+        0.03888325919901176, 0.156516962831387, 0.2566188630923052,
+        0.22964831897742494, 18.01458955914392, 0.1758261821333063,
+        0.07072960460438789, 2.133676166769288, 0.5803772876816393,
+        1.1371591992832686
+      ],
+      coef: [
+        0.07989451054901522, -0.008449774700538018, 0.0037040240478249937,
+        0.034487454985934946, 0.12706037408932422, 0.04803986349461188,
+        0.0017698289255918785, 0.026694841196721702, 0.06258607790295702,
+        -0.0637473426767717, -0.08696513526404268, 0.30847235819256497,
+        -0.07898074221007755, 0.017006062873980952, -0.05941721115616414,
+        -1.4285328018062198
+      ],
+      intercept: -0.4116117793517899,
+      metrics: {
+        roc_auc: 0.8351529422957994,
+        brier_score: 0.17230227372600035,
+        n_total: 2500
+      }
+    };
+    const canvas = document.getElementById("probCanvas");
+    const shell = document.getElementById("canvasShell");
+    const ctx = canvas.getContext("2d");
+    const inputs = {};
+    const inputIds = [
+      "keeperU", "keeperV", "reachX", "reachZ", "deform",
+      "ballU", "ballV", "targetU", "targetV",
+      "ballTime", "reaction", "shotSpeed", "uncertainty",
+      "isShootoutContext", "teamKicksFirst", "shootoutRound", "partialScore"
+    ];
+    for (const id of inputIds) {
+      inputs[id] = document.getElementById(id);
+    }
+
+    const state = {
+      keeperU: 0.50,
+      keeperV: -0.55,
+      reachX: 1.18,
+      reachZ: 0.95,
+      deform: 0.50,
+      ballU: 0.50,
+      ballV: -2.10,
+      targetU: 0.82,
+      targetV: 0.18,
+      ballTime: 0.55,
+      reaction: 0.32,
+      shotSpeed: 82,
+      uncertainty: 0.22,
+      proxy: "circle",
+      modelMode: "ml",
+      scenario: "balanced",
+      viewZoom: FIXED_VIEW_ZOOM,
+      ciAlpha: 0.10,
+      isShootoutContext: 0,
+      teamKicksFirst: 1,
+      shootoutRound: 3,
+      partialScore: -1
+    };
+
+    const featureLabels = {
+      keeper_center_u: "Portero horizontal",
+      keeper_center_v: "Portero profundidad",
+      keeper_body_width: "Ancho corporal",
+      keeper_body_height: "Altura corporal",
+      keeper_hand_span: "Alcance de manos",
+      keeper_foot_span: "Apertura de pies",
+      keeper_polygon_area_uv: "Área corporal proxy",
+      keeper_pose_confidence: "Confianza de pose",
+      ball_position_u: "Balón horizontal",
+      ball_position_v: "Balón profundidad",
+      goal_entry_u: "Entrada horizontal",
+      goal_entry_v: "Entrada vertical",
+      shot_ball_speed: "Velocidad del tiro",
+      time_ball_to_goal: "Tiempo al arco",
+      reaction_time: "Reacción",
+      lateral_delta_m: "Distancia lateral",
+      vertical_delta_m: "Distancia vertical",
+      distance_keeper_to_target_m: "Portero-objetivo",
+      distance_ball_to_target_m: "Balón-objetivo",
+      distance_keeper_to_ball_m: "Portero-balón",
+      keeper_outside_goal: "Fuera de marco",
+      team_kicks_first: "Patea primero",
+      shootout_round: "Ronda tanda",
+      partial_score: "Marcador parcial",
+      kick_importance: "Importancia tiro",
+      is_shootout_context: "Contexto tanda"
+    };
+
+    const mlControlFeatures = {
+      keeperU: [
+        "keeper_center_u", "lateral_delta_m", "distance_keeper_to_target_m",
+        "distance_keeper_to_ball_m", "keeper_outside_goal"
+      ],
+      keeperV: [
+        "keeper_center_v", "vertical_delta_m", "distance_keeper_to_target_m",
+        "distance_keeper_to_ball_m", "keeper_outside_goal"
+      ],
+      reachX: ["keeper_body_width", "keeper_hand_span", "keeper_foot_span"],
+      reachZ: ["keeper_body_height"],
+      deform: ["keeper_polygon_area_uv"],
+      ballU: ["ball_position_u", "distance_ball_to_target_m", "distance_keeper_to_ball_m"],
+      ballV: ["ball_position_v", "distance_ball_to_target_m", "distance_keeper_to_ball_m"],
+      targetU: ["goal_entry_u", "lateral_delta_m", "distance_keeper_to_target_m", "distance_ball_to_target_m"],
+      targetV: ["goal_entry_v", "vertical_delta_m", "distance_keeper_to_target_m", "distance_ball_to_target_m"],
+      ballTime: ["time_ball_to_goal"],
+      reaction: ["reaction_time"],
+      shotSpeed: ["shot_ball_speed"],
+      isShootoutContext: ["is_shootout_context", "team_kicks_first", "shootout_round", "partial_score", "kick_importance"],
+      teamKicksFirst: ["team_kicks_first", "kick_importance"],
+      shootoutRound: ["shootout_round", "kick_importance"],
+      partialScore: ["partial_score", "kick_importance"]
+    };
+    const mlAlwaysVisibleControls = new Set(["uncertainty"]);
+    const shootoutControlIds = ["isShootoutContext", "teamKicksFirst", "shootoutRound", "partialScore"];
+
+    const presets = {
+      balanced: {
+        keeperU: 0.50, keeperV: -0.55, reachX: 1.18, reachZ: 0.95, deform: 0.50,
+        ballU: 0.50, ballV: -1.85, targetU: 0.82, targetV: 0.18,
+        ballTime: 0.55, reaction: 0.32, shotSpeed: 82, uncertainty: 0.22,
+        viewZoom: FIXED_VIEW_ZOOM
+      },
+      late: {
+        keeperU: 0.50, keeperV: -0.35, reachX: 1.05, reachZ: 0.88, deform: 0.36,
+        ballU: 0.48, ballV: -2.0, targetU: 0.78, targetV: 0.70,
+        ballTime: 0.31, reaction: 0.38, shotSpeed: 108, uncertainty: 0.34
+      },
+      wide: {
+        keeperU: 0.15, keeperV: -0.40, reachX: 1.24, reachZ: 0.98, deform: 0.68,
+        ballU: 0.88, ballV: -1.4, targetU: 0.91, targetV: 0.30,
+        ballTime: 0.62, reaction: 0.30, shotSpeed: 78, uncertainty: 0.20
+      },
+      area: {
+        keeperU: 0.62, keeperV: -0.95, reachX: 1.10, reachZ: 0.92, deform: 0.42,
+        ballU: 0.52, ballV: -2.35, targetU: 0.74, targetV: 0.58,
+        ballTime: 0.48, reaction: 0.34, shotSpeed: 88, uncertainty: 0.26, viewZoom: FIXED_VIEW_ZOOM,
+        isShootoutContext: 0, teamKicksFirst: 1, shootoutRound: 1, partialScore: 0
+      },
+      tanda: {
+        keeperU: 0.48, keeperV: -0.42, reachX: 1.08, reachZ: 0.90, deform: 0.35,
+        ballU: 0.50, ballV: 0.0, targetU: 0.78, targetV: 0.55,
+        ballTime: 0.35, reaction: 0.30, shotSpeed: 112, uncertainty: 0.28, viewZoom: FIXED_VIEW_ZOOM,
+        isShootoutContext: 1, teamKicksFirst: 0, shootoutRound: 4, partialScore: -1
+      }
+    };
+
+    let layout = null;
+    let dragMode = null;
+
+    function clamp(value, min = 0, max = 1) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function clampToPitchArea(u, v) {
+      return {
+        u: clamp(u, PITCH_BOUNDS.uMin, PITCH_BOUNDS.uMax),
+        v: clamp(v, PITCH_BOUNDS.vMin, PITCH_BOUNDS.vMax)
+      };
+    }
+
+    function clampToBounds(u, v, bounds) {
+      return {
+        u: clamp(u, bounds.uMin, bounds.uMax),
+        v: clamp(v, bounds.vMin, bounds.vMax)
+      };
+    }
+
+    function activeKeeperBounds() {
+      return state.modelMode === "ml" ? ML_KEEPER_BOUNDS : PITCH_BOUNDS;
+    }
+
+    function clampKeeperPosition(u, v) {
+      return clampToBounds(u, v, activeKeeperBounds());
+    }
+
+    function clampActorsToPitchArea() {
+      const keeper = clampKeeperPosition(state.keeperU, state.keeperV);
+      const ball = clampToPitchArea(state.ballU, state.ballV);
+      state.keeperU = keeper.u;
+      state.keeperV = keeper.v;
+      state.ballU = ball.u;
+      state.ballV = ball.v;
+    }
+
+    function pitchZoneLabel(u, v) {
+      const inSmall =
+        u >= GOAL_AREA_BOUNDS.uMin && u <= GOAL_AREA_BOUNDS.uMax
+        && v >= GOAL_AREA_BOUNDS.vMin && v <= GOAL_AREA_BOUNDS.vMax;
+      return inSmall ? "área chica" : "área grande";
+    }
+
+    function getPlayableCanvasRect() {
+      const topLeft = toCanvas(PITCH_BOUNDS.uMin, PITCH_BOUNDS.vMax);
+      const bottomRight = toCanvas(PITCH_BOUNDS.uMax, PITCH_BOUNDS.vMin);
+      return {
+        left: Math.min(topLeft.x, bottomRight.x),
+        top: Math.min(topLeft.y, bottomRight.y),
+        width: Math.abs(bottomRight.x - topLeft.x),
+        height: Math.abs(bottomRight.y - topLeft.y)
+      };
+    }
+
+    function sigmoid(value) {
+      return 1 / (1 + Math.exp(-value));
+    }
+
+    function mix(a, b, t) {
+      return a + (b - a) * t;
+    }
+
+    function colorMix(a, b, t) {
+      return [
+        Math.round(mix(a[0], b[0], t)),
+        Math.round(mix(a[1], b[1], t)),
+        Math.round(mix(a[2], b[2], t))
+      ];
+    }
+
+    function probabilityColor(p, alpha = 0.88) {
+      const stops = [
+        { p: 0.00, c: [154, 50, 45] },
+        { p: 0.35, c: [212, 154, 31] },
+        { p: 0.68, c: [36, 145, 92] },
+        { p: 1.00, c: [20, 102, 168] }
+      ];
+      for (let i = 0; i < stops.length - 1; i += 1) {
+        const a = stops[i];
+        const b = stops[i + 1];
+        if (p <= b.p) {
+          const t = clamp((p - a.p) / (b.p - a.p));
+          const c = colorMix(a.c, b.c, t);
+          return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+        }
+      }
+      return `rgba(20,102,168,${alpha})`;
+    }
+
+    function keeperOutsideGoal() {
+      const lateral = Math.max(0, Math.abs(state.keeperU - 0.5) - 0.5);
+      const vertical = Math.max(0, Math.max(state.keeperV - 1, -state.keeperV));
+      return clamp(lateral * 2 + vertical, 0, 1.5);
+    }
+
+    function featureMapForPoint(u, v) {
+      const lateral = (u - state.keeperU) * GOAL_WIDTH_M;
+      const vertical = (v - state.keeperV) * GOAL_HEIGHT_M;
+      const ballToTargetLateral = (u - state.ballU) * GOAL_WIDTH_M;
+      const ballToTargetVertical = (v - state.ballV) * GOAL_HEIGHT_M;
+      const keeperToBallLateral = (state.ballU - state.keeperU) * GOAL_WIDTH_M;
+      const keeperToBallVertical = (state.ballV - state.keeperV) * GOAL_HEIGHT_M;
+      return {
+        keeper_center_u: state.keeperU,
+        keeper_center_v: state.keeperV,
+        keeper_body_width: Math.max(0.35, state.reachX * 0.66),
+        keeper_body_height: Math.max(1.0, state.reachZ * 1.62),
+        keeper_hand_span: Math.max(0.9, state.reachX * 1.55),
+        keeper_foot_span: Math.max(0.3, state.reachX * 0.58),
+        keeper_polygon_area_uv: clamp(0.10 + state.deform * 0.055, 0.03, 0.26),
+        keeper_pose_confidence: 0.78,
+        ball_position_u: state.ballU,
+        ball_position_v: state.ballV,
+        goal_entry_u: u,
+        goal_entry_v: v,
+        shot_ball_speed: state.shotSpeed,
+        time_ball_to_goal: state.ballTime,
+        reaction_time: state.reaction,
+        lateral_delta_m: lateral,
+        vertical_delta_m: vertical,
+        distance_keeper_to_target_m: Math.hypot(lateral, vertical),
+        distance_ball_to_target_m: Math.hypot(ballToTargetLateral, ballToTargetVertical),
+        distance_keeper_to_ball_m: Math.hypot(keeperToBallLateral, keeperToBallVertical),
+        keeper_outside_goal: keeperOutsideGoal(),
+        team_kicks_first: state.isShootoutContext ? state.teamKicksFirst : 0.5,
+        shootout_round: state.isShootoutContext ? state.shootoutRound : 0,
+        partial_score: state.isShootoutContext ? state.partialScore : 0,
+        kick_importance: shootoutKickImportance(),
+        is_shootout_context: state.isShootoutContext
+      };
+    }
+
+    function shootoutKickImportance() {
+      if (!state.isShootoutContext) return 0.32;
+      let imp = 0.22 + 0.11 * (state.shootoutRound - 1);
+      if (state.partialScore < 0) imp += 0.18;
+      if (!state.teamKicksFirst && state.partialScore < 0) imp += 0.12;
+      return clamp(imp, 0.15, 0.98);
+    }
+
+    function mlProbabilityAt(u, v) {
+      const features = featureMapForPoint(u, v);
+      let logit = TRAINED_MODEL.intercept;
+      for (let i = 0; i < TRAINED_MODEL.feature_columns.length; i += 1) {
+        const name = TRAINED_MODEL.feature_columns[i];
+        let value = Number(features[name]);
+        if (!Number.isFinite(value)) value = TRAINED_MODEL.imputer_median[i];
+        const scaled = (value - TRAINED_MODEL.scaler_mean[i]) / Math.max(1e-9, TRAINED_MODEL.scaler_scale[i]);
+        logit += TRAINED_MODEL.coef[i] * scaled;
+      }
+      const p = sigmoid(logit);
+      return clamp(p);
+    }
+
+    function proxyProbabilityAt(u, v) {
+      const targetX = u * GOAL_WIDTH_M;
+      const targetZ = v * GOAL_HEIGHT_M;
+      const keeperX = state.keeperU * GOAL_WIDTH_M;
+      const keeperZ = state.keeperV * GOAL_HEIGHT_M;
+      const dx = targetX - keeperX;
+      const dz = targetZ - keeperZ;
+      const lateralDemand = Math.abs(dx) / GOAL_WIDTH_M;
+      const highDemand = Math.max(0, dz) / GOAL_HEIGHT_M;
+      const lowDemand = Math.max(0, -dz) / GOAL_HEIGHT_M;
+      const deform = state.proxy === "deformable" ? state.deform : state.deform * 0.35;
+      const reachX = Math.max(0.15, state.reachX * (1 + deform * (0.34 + lateralDemand * 0.42)));
+      const reachZ = Math.max(0.15, state.reachZ * (1 + deform * (0.18 + highDemand * 0.38 + lowDemand * 0.16)));
+      const normDist = Math.sqrt((dx / reachX) ** 2 + (dz / reachZ) ** 2);
+      const movementCost = 0.16 + normDist * 0.24 + lateralDemand * 0.12 + highDemand * 0.08;
+      const timeRatio = state.ballTime / Math.max(0.08, state.reaction + movementCost);
+      const timeScore = sigmoid((timeRatio - 1.0) * 2.35);
+      const speedPenalty = clamp((state.shotSpeed - 70) / 80, 0, 1) * 0.72;
+      const coreBonus = Math.exp(-1.85 * normDist * normDist) * 1.15;
+      const logit = 3.95 * (1.03 - normDist) + 2.05 * (timeScore - 0.5) + coreBonus - speedPenalty;
+      const p = sigmoid(logit);
+      return clamp(p);
+    }
+
+    function probabilityAt(u, v) {
+      return state.modelMode === "ml" ? mlProbabilityAt(u, v) : proxyProbabilityAt(u, v);
+    }
+
+    function modelSourceLabel() {
+      if (TRAINED_MODEL.trained_on_synthetic_data) return "demo sintético";
+      if (String(TRAINED_MODEL.source || "").includes("pff_worldcup_2022")) return "PFF World Cup 2022";
+      return TRAINED_MODEL.source || "modelo local";
+    }
+
+    function modelKindLabel() {
+      if (state.modelMode !== "ml") return "Proxy geom.";
+      return TRAINED_MODEL.model_kind === "logistic_regression" ? "Logit" : TRAINED_MODEL.model_kind || "ML";
+    }
+
+    function mlFeatureContributions(u, v) {
+      if (!Array.isArray(TRAINED_MODEL.feature_columns)) return [];
+      const features = featureMapForPoint(u, v);
+      const rows = [];
+      for (let i = 0; i < TRAINED_MODEL.feature_columns.length; i += 1) {
+        const name = TRAINED_MODEL.feature_columns[i];
+        let value = Number(features[name]);
+        if (!Number.isFinite(value)) value = TRAINED_MODEL.imputer_median[i];
+        const scale = Math.max(1e-9, Number(TRAINED_MODEL.scaler_scale[i]));
+        const scaled = (value - TRAINED_MODEL.scaler_mean[i]) / scale;
+        const contribution = Number(TRAINED_MODEL.coef[i]) * scaled;
+        rows.push({
+          name,
+          label: featureLabels[name] || name,
+          value,
+          contribution,
+          abs: Math.abs(contribution)
+        });
+      }
+      return rows.sort((a, b) => b.abs - a.abs);
+    }
+
+    function probabilityAtWithKeeper(u, v, keeperU, keeperV) {
+      const oldKeeperU = state.keeperU;
+      const oldKeeperV = state.keeperV;
+      state.keeperU = keeperU;
+      state.keeperV = keeperV;
+      const p = probabilityAt(u, v);
+      state.keeperU = oldKeeperU;
+      state.keeperV = oldKeeperV;
+      return p;
+    }
+
+    function percent(value, decimals = 1) {
+      return `${(value * 100).toFixed(decimals)}%`;
+    }
+
+    function signedPercentagePoints(value, decimals = 1) {
+      const pp = value * 100;
+      return `${pp >= 0 ? "+" : ""}${pp.toFixed(decimals)} pp`;
+    }
+
+    function binaryEntropyBits(p) {
+      const q = clamp(p, 1e-9, 1 - 1e-9);
+      return -(q * Math.log2(q) + (1 - q) * Math.log2(1 - q));
+    }
+
+    function seededRandom(seed) {
+      let s = seed >>> 0;
+      return () => {
+        s = (1664525 * s + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    }
+
+    function normalSample(rng) {
+      const u1 = Math.max(1e-9, rng());
+      const u2 = rng();
+      return Math.sqrt(-2 * Math.log(u1)) * Math.cos(Math.PI * 2 * u2);
+    }
+
+    function monteCarloSeed() {
+      const a = Math.round(state.targetU * 10000);
+      const b = Math.round(state.targetV * 10000);
+      const c = Math.round(state.uncertainty * 1000);
+      return (a * 73856093) ^ (b * 19349663) ^ (c * 83492791) ^ 0x9e3779b9;
+    }
+
+    function monteCarloSigma() {
+      return {
+        u: 0.012 + state.uncertainty * 0.14,
+        v: 0.010 + state.uncertainty * 0.11
+      };
+    }
+
+    function generateMonteCarloSamples(count = MC_SAMPLE_COUNT) {
+      const rng = seededRandom(monteCarloSeed());
+      const sigma = monteCarloSigma();
+      const samples = [];
+      for (let i = 0; i < count; i += 1) {
+        const u = clamp(state.targetU + normalSample(rng) * sigma.u);
+        const v = clamp(state.targetV + normalSample(rng) * sigma.v);
+        samples.push({ u, v, p: probabilityAt(u, v) });
+      }
+      return samples;
+    }
+
+    function percentile(sortedValues, q) {
+      if (!sortedValues.length) return NaN;
+      const pos = clamp(q) * (sortedValues.length - 1);
+      const lo = Math.floor(pos);
+      const hi = Math.ceil(pos);
+      if (lo === hi) return sortedValues[lo];
+      return sortedValues[lo] + (sortedValues[hi] - sortedValues[lo]) * (pos - lo);
+    }
+
+    function meanProbability(samples) {
+      if (!samples.length) return NaN;
+      return samples.reduce((sum, sample) => sum + sample.p, 0) / samples.length;
+    }
+
+    function summarizeMonteCarlo(samples) {
+      const values = samples.map((sample) => sample.p).sort((a, b) => a - b);
+      const alpha = clamp(state.ciAlpha, 0.01, 0.10);
+      const lowerQ = alpha / 2;
+      const upperQ = 1 - alpha / 2;
+      return {
+        mean: meanProbability(samples),
+        lower: percentile(values, lowerQ),
+        upper: percentile(values, upperQ),
+        alpha,
+        confidence: 1 - alpha,
+        lowerQ,
+        upperQ
+      };
+    }
+
+    function optimizationSampleSubset(samples) {
+      const step = Math.max(1, Math.floor(samples.length / OPTIMIZATION_SAMPLE_COUNT));
+      return samples.filter((_, idx) => idx % step === 0).slice(0, OPTIMIZATION_SAMPLE_COUNT);
+    }
+
+    function expectedProbabilityForKeeper(samples, keeperU, keeperV) {
+      if (!samples.length) return NaN;
+      let total = 0;
+      for (const sample of samples) {
+        total += probabilityAtWithKeeper(sample.u, sample.v, keeperU, keeperV);
+      }
+      return total / samples.length;
+    }
+
+    function optimizeKeeperPosition(samples) {
+      const bounds = activeKeeperBounds();
+      const optSamples = optimizationSampleSubset(samples);
+      const currentExpected = expectedProbabilityForKeeper(optSamples, state.keeperU, state.keeperV);
+      let best = {
+        u: state.keeperU,
+        v: state.keeperV,
+        expected: currentExpected,
+        stage: "current"
+      };
+      let evaluated = 0;
+      const seen = new Set();
+
+      const evaluateCandidate = (candidateU, candidateV, stage) => {
+        const u = clamp(candidateU, bounds.uMin, bounds.uMax);
+        const v = clamp(candidateV, bounds.vMin, bounds.vMax);
+        const key = `${u.toFixed(6)}:${v.toFixed(6)}`;
+        if (seen.has(key)) return;
+        seen.add(key);
+        const expected = expectedProbabilityForKeeper(optSamples, u, v);
+        evaluated += 1;
+        if (Number.isFinite(expected) && (!Number.isFinite(best.expected) || expected > best.expected)) {
+          best = { u, v, expected, stage };
+        }
+      };
+
+      evaluateCandidate(state.keeperU, state.keeperV, "current");
+
+      for (let ui = 0; ui < OPT_GRID_U_STEPS; ui += 1) {
+        const u = bounds.uMin + ((bounds.uMax - bounds.uMin) * ui) / Math.max(1, OPT_GRID_U_STEPS - 1);
+        for (let vi = 0; vi < OPT_GRID_V_STEPS; vi += 1) {
+          const v = bounds.vMin + ((bounds.vMax - bounds.vMin) * vi) / Math.max(1, OPT_GRID_V_STEPS - 1);
+          evaluateCandidate(u, v, "coarse");
+        }
+      }
+
+      const coarseBest = { ...best };
+      const coarseStepU = (bounds.uMax - bounds.uMin) / Math.max(1, OPT_GRID_U_STEPS - 1);
+      const coarseStepV = (bounds.vMax - bounds.vMin) / Math.max(1, OPT_GRID_V_STEPS - 1);
+      for (let ui = 0; ui < OPT_REFINE_STEPS; ui += 1) {
+        const offsetU = -coarseStepU + (2 * coarseStepU * ui) / Math.max(1, OPT_REFINE_STEPS - 1);
+        for (let vi = 0; vi < OPT_REFINE_STEPS; vi += 1) {
+          const offsetV = -coarseStepV + (2 * coarseStepV * vi) / Math.max(1, OPT_REFINE_STEPS - 1);
+          evaluateCandidate(coarseBest.u + offsetU, coarseBest.v + offsetV, "refined");
+        }
+      }
+
+      return {
+        ...best,
+        currentExpected,
+        improvement: Number.isFinite(currentExpected) ? best.expected - currentExpected : 0,
+        evaluated,
+        samplesUsed: optSamples.length,
+        method: "coarse_grid_plus_local_refinement"
+      };
+    }
+
+    function computeDecisionAnalysis() {
+      const targetProb = probabilityAt(state.targetU, state.targetV);
+      const samples = generateMonteCarloSamples();
+      const summary = summarizeMonteCarlo(samples);
+      const optimization = optimizeKeeperPosition(samples);
+      return {
+        targetProb,
+        entropyBits: binaryEntropyBits(targetProb),
+        samples,
+        summary,
+        optimization
+      };
+    }
+
+    function targetDistance() {
+      const dx = (state.targetU - state.keeperU) * GOAL_WIDTH_M;
+      const dz = (state.targetV - state.keeperV) * GOAL_HEIGHT_M;
+      return Math.hypot(dx, dz);
+    }
+
+    function modelFeatureIsActive(featureName) {
+      const index = TRAINED_MODEL.feature_columns.indexOf(featureName);
+      if (index < 0) return false;
+      return Math.abs(Number(TRAINED_MODEL.coef[index])) > 1e-7;
+    }
+
+    function controlAffectsCurrentMl(controlId) {
+      if (mlAlwaysVisibleControls.has(controlId)) return true;
+      const features = mlControlFeatures[controlId] || [];
+      return features.some(modelFeatureIsActive);
+    }
+
+    function setHidden(element, hidden) {
+      if (element) element.classList.toggle("ml-hidden", Boolean(hidden));
+    }
+
+    function updateControlVisibility() {
+      const isMl = state.modelMode === "ml";
+      const keeperBounds = activeKeeperBounds();
+      inputs.keeperU.min = String(keeperBounds.uMin);
+      inputs.keeperU.max = String(keeperBounds.uMax);
+      inputs.keeperV.min = String(keeperBounds.vMin);
+      inputs.keeperV.max = String(keeperBounds.vMax);
+
+      for (const [controlId] of Object.entries(mlControlFeatures)) {
+        const control = inputs[controlId]?.closest(".control");
+        setHidden(control, isMl && !controlAffectsCurrentMl(controlId));
+      }
+
+      const proxyControls = document.getElementById("proxyControls");
+      setHidden(proxyControls, isMl);
+
+      const shootoutPanel = document.getElementById("shootoutPanel");
+      const shootoutActiveInMl = shootoutControlIds.some(controlAffectsCurrentMl);
+      setHidden(shootoutPanel, !isMl || !shootoutActiveInMl);
+
+      const activeControlNote = document.getElementById("activeControlNote");
+      if (activeControlNote) {
+        activeControlNote.textContent = isMl
+          ? "Solo se muestran controles que el modelo usa realmente. El portero queda limitado a la zona chica frente al arco para evitar artefactos del tracking event-level PFF."
+          : "Aqui los controles visuales/proxy si modifican la funcion geometrica: alcance, deformacion, velocidad y reaccion no salen del modelo PFF.";
+      }
+
+      const modelModeNote = document.getElementById("modelModeNote");
+      if (modelModeNote) {
+        modelModeNote.textContent = isMl
+          ? "Baseline ML (PFF): estima probabilidad de parada con una regresion logistica entrenada sobre tiros etiquetados como gol/parada. Es un baseline exploratorio, no el modelo final del poligono."
+          : "Simulador geometrico: calcula una region de alcance plausible a partir de distancia al objetivo, tiempo disponible y extension corporal simulada. No esta entrenado con datos.";
+      }
+
+      const modelTag = document.getElementById("modelTag");
+      if (modelTag) {
+        modelTag.textContent = isMl
+          ? (TRAINED_MODEL.trained_on_synthetic_data ? "synthetic ML model" : "PFF ML model")
+          : "geometry proxy";
+      }
+    }
+
+    function syncInputsFromState() {
+      state.viewZoom = FIXED_VIEW_ZOOM;
+      for (const id of inputIds) {
+        inputs[id].value = state[id];
+      }
+      document.getElementById("keeperUValue").textContent = state.keeperU.toFixed(2);
+      document.getElementById("keeperVValue").textContent = state.keeperV.toFixed(2);
+      document.getElementById("ballUValue").textContent = state.ballU.toFixed(2);
+      document.getElementById("ballVValue").textContent = state.ballV.toFixed(2);
+      document.getElementById("reachXValue").textContent = `${state.reachX.toFixed(2)}m`;
+      document.getElementById("reachZValue").textContent = `${state.reachZ.toFixed(2)}m`;
+      document.getElementById("deformValue").textContent = state.deform.toFixed(2);
+      document.getElementById("targetUValue").textContent = state.targetU.toFixed(2);
+      document.getElementById("targetVValue").textContent = state.targetV.toFixed(2);
+      document.getElementById("ballTimeValue").textContent = `${state.ballTime.toFixed(2)}s`;
+      document.getElementById("reactionValue").textContent = `${state.reaction.toFixed(2)}s`;
+      document.getElementById("shotSpeedValue").textContent = `${Math.round(state.shotSpeed)}km/h`;
+      document.getElementById("uncertaintyValue").textContent = state.uncertainty.toFixed(2);
+      document.getElementById("shootoutContextValue").textContent = state.isShootoutContext ? "Tanda" : "Juego";
+      document.getElementById("teamKicksFirstValue").textContent = state.teamKicksFirst ? "Sí" : "No";
+      document.getElementById("shootoutRoundValue").textContent = String(state.shootoutRound);
+      const scoreLabels = { "-1": "Perdiendo", "0": "Empate", "1": "Ganando" };
+      document.getElementById("partialScoreValue").textContent = scoreLabels[String(state.partialScore)] || "0";
+      for (const button of document.querySelectorAll("[data-proxy]")) {
+        button.classList.toggle("active", button.dataset.proxy === state.proxy);
+      }
+      for (const button of document.querySelectorAll("[data-scenario]")) {
+        button.classList.toggle("active", button.dataset.scenario === state.scenario);
+      }
+      for (const button of document.querySelectorAll("[data-model-mode]")) {
+        button.classList.toggle("active", button.dataset.modelMode === state.modelMode);
+      }
+      syncAlphaButtons();
+      updateControlVisibility();
+    }
+
+    function goalUnitsToPx(goalUnits, axis = "x") {
+      const g = layout.goalPx;
+      return goalUnits * (axis === "y" ? g.height : g.width);
+    }
+
+    function metersToCanvasX(meters) {
+      return (meters / GOAL_WIDTH_M) * layout.goalPx.width;
+    }
+
+    function metersToCanvasY(meters) {
+      return (meters / GOAL_HEIGHT_M) * layout.goalPx.height;
+    }
+
+    function computeLayout() {
+      const rect = shell.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(320, Math.floor(rect.width));
+      const height = Math.max(260, Math.floor(rect.height));
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      const padX = width < 620 ? 16 : 32;
+      const padTop = width < 620 ? 52 : 64;
+      const padBottom = width < 620 ? 88 : 96;
+      const maxPlotW = width - padX * 2;
+      const maxPlotH = height - padTop - padBottom;
+      const zoom = FIXED_VIEW_ZOOM;
+      state.viewZoom = FIXED_VIEW_ZOOM;
+
+      let sceneW = maxPlotW;
+      let sceneH = sceneW * SCENE_ASPECT;
+      if (sceneH > maxPlotH) {
+        sceneH = maxPlotH;
+        sceneW = sceneH / SCENE_ASPECT;
+      }
+      const goalWWide = sceneW / PITCH_RATIOS.penaltyWidth;
+      const goalHWide = goalWWide * (GOAL_HEIGHT_M / GOAL_WIDTH_M);
+
+      let goalWTight = maxPlotW * GOAL_ZOOM_MAX;
+      let goalHTight = goalWTight * (GOAL_HEIGHT_M / GOAL_WIDTH_M);
+      if (goalHTight > maxPlotH * GOAL_ZOOM_MAX) {
+        goalHTight = maxPlotH * GOAL_ZOOM_MAX;
+        goalWTight = goalHTight * (GOAL_WIDTH_M / GOAL_HEIGHT_M);
+      }
+
+      const goalW = goalWWide + (goalWTight - goalWWide) * zoom;
+      const goalH = goalHWide + (goalHTight - goalHWide) * zoom;
+      const sceneTopWide = padTop + Math.max(0, (maxPlotH - sceneH) * 0.08);
+      const plotTopTight = padTop + (maxPlotH - goalH) * 0.18;
+      const plotTop = sceneTopWide + (plotTopTight - sceneTopWide) * zoom;
+      const plotLeft = (width - goalW) / 2;
+      const goalLineY = plotTop + goalH;
+      const sceneLeft = (width - sceneW) / 2;
+      const goalAreaLeft = plotLeft + (goalW * (1 - PITCH_RATIOS.goalAreaWidth)) / 2;
+      const goalAreaH = goalH * PITCH_RATIOS.goalAreaDepth;
+      const visibleGoalAreaH = Math.max(0, Math.min(goalAreaH, height - goalLineY - 6));
+      const showPenalty = zoom < PENALTY_MARKINGS_ZOOM;
+
+      layout = {
+        width,
+        height,
+        viewZoom: zoom,
+        showPenalty,
+        goalPx: { width: goalW, height: goalH },
+        postRadius: clamp(goalW * PITCH_RATIOS.postRadius, 3.5, 11),
+        plot: {
+          left: plotLeft,
+          top: plotTop,
+          width: goalW,
+          height: goalH,
+          right: plotLeft + goalW,
+          bottom: goalLineY
+        },
+        goalArea: {
+          left: goalAreaLeft,
+          top: goalLineY,
+          width: goalW * PITCH_RATIOS.goalAreaWidth,
+          height: goalAreaH,
+          visibleHeight: visibleGoalAreaH,
+          right: goalAreaLeft + goalW * PITCH_RATIOS.goalAreaWidth,
+          bottom: goalLineY + goalAreaH
+        }
+      };
+
+      if (showPenalty) {
+        layout.penalty = {
+          left: sceneLeft,
+          top: goalLineY,
+          width: sceneW,
+          height: goalH * PITCH_RATIOS.penaltyDepth,
+          right: sceneLeft + sceneW,
+          bottom: goalLineY + goalH * PITCH_RATIOS.penaltyDepth
+        };
+        layout.penaltySpot = {
+          x: plotLeft + goalW / 2,
+          y: goalLineY + goalH * PITCH_RATIOS.penaltySpot
+        };
+      }
+    }
+
+    function toCanvas(u, v) {
+      const p = layout.plot;
+      return {
+        x: p.left + u * p.width,
+        y: p.bottom - v * p.height
+      };
+    }
+
+    function fromCanvas(x, y) {
+      const p = layout.plot;
+      return {
+        u: (x - p.left) / p.width,
+        v: (p.bottom - y) / p.height
+      };
+    }
+
+    function drawBackground() {
+      const { width, height } = layout;
+      const sky = ctx.createLinearGradient(0, 0, 0, height * 0.42);
+      sky.addColorStop(0, "#1a4d38");
+      sky.addColorStop(1, "#123d2c");
+      ctx.fillStyle = sky;
+      ctx.fillRect(0, 0, width, height);
+
+      const stripeW = Math.max(42, width / 14);
+      for (let x = -stripeW; x < width + stripeW; x += stripeW) {
+        const even = Math.round(x / stripeW) % 2 === 0;
+        ctx.fillStyle = even ? "#1f744a" : "#1a6843";
+        ctx.beginPath();
+        ctx.moveTo(x, height * 0.08);
+        ctx.lineTo(x + stripeW, height * 0.04);
+        ctx.lineTo(x + stripeW * 0.42, height);
+        ctx.lineTo(x - stripeW * 0.5, height);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      const vignette = ctx.createRadialGradient(
+        width / 2,
+        height * 0.55,
+        Math.min(width, height) * 0.12,
+        width / 2,
+        height * 0.55,
+        Math.max(width, height) * 0.78
+      );
+      vignette.addColorStop(0, "rgba(255,255,255,0.06)");
+      vignette.addColorStop(1, "rgba(0,0,0,0.22)");
+      ctx.fillStyle = vignette;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    function drawPitchPlayableZone() {
+      const zone = getPlayableCanvasRect();
+      const smallTopLeft = toCanvas(GOAL_AREA_BOUNDS.uMin, GOAL_AREA_BOUNDS.vMax);
+      const smallBottomRight = toCanvas(GOAL_AREA_BOUNDS.uMax, GOAL_AREA_BOUNDS.vMin);
+      const smallRect = {
+        left: Math.min(smallTopLeft.x, smallBottomRight.x),
+        top: Math.min(smallTopLeft.y, smallBottomRight.y),
+        width: Math.abs(smallBottomRight.x - smallTopLeft.x),
+        height: Math.abs(smallBottomRight.y - smallTopLeft.y)
+      };
+      ctx.save();
+      ctx.fillStyle = "rgba(120, 190, 255, 0.07)";
+      ctx.fillRect(zone.left, zone.top, zone.width, zone.height);
+      ctx.fillStyle = "rgba(255, 255, 255, 0.06)";
+      ctx.fillRect(smallRect.left, smallRect.top, smallRect.width, smallRect.height);
+      ctx.strokeStyle = "rgba(255, 255, 255, 0.22)";
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 6]);
+      ctx.strokeRect(zone.left, zone.top, zone.width, zone.height);
+      ctx.strokeRect(smallRect.left, smallRect.top, smallRect.width, smallRect.height);
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    function drawPitchMarkings() {
+      const p = layout.plot;
+      const box = layout.goalArea;
+      const lineW = Math.max(1.5, goalUnitsToPx(PITCH_RATIOS.lineWidth));
+
+      ctx.save();
+      ctx.lineWidth = lineW;
+      ctx.strokeStyle = "rgba(255,255,255,0.92)";
+
+      if (layout.showPenalty && layout.penalty) {
+        const pen = layout.penalty;
+        const spot = layout.penaltySpot;
+        ctx.fillStyle = "rgba(255,255,255,0.04)";
+        ctx.fillRect(pen.left, pen.top, pen.width, pen.height);
+        ctx.strokeRect(pen.left, pen.top, pen.width, pen.height);
+
+        const spotRadius = Math.max(4.5, goalUnitsToPx(PITCH_RATIOS.spotRadius) * 1.45);
+        ctx.fillStyle = "#ffffff";
+        ctx.strokeStyle = "rgba(23,32,28,0.78)";
+        ctx.lineWidth = Math.max(1.2, lineW * 0.65);
+        ctx.beginPath();
+        ctx.arc(spot.x, spot.y, spotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.setLineDash([7, 9]);
+        ctx.strokeStyle = "rgba(255,255,255,0.38)";
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(p.left + p.width / 2, p.bottom);
+        ctx.lineTo(p.left + p.width / 2, pen.bottom);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.strokeStyle = "rgba(255,255,255,0.92)";
+        ctx.lineWidth = lineW;
+      }
+
+      if (box.visibleHeight > 2) {
+        ctx.fillStyle = "rgba(255,255,255,0.07)";
+        ctx.fillRect(box.left, box.top, box.width, box.visibleHeight);
+        ctx.strokeRect(box.left, box.top, box.width, box.visibleHeight);
+      }
+
+      ctx.beginPath();
+      ctx.lineWidth = lineW + 1;
+      ctx.moveTo(p.left - 2, p.bottom);
+      ctx.lineTo(p.right + 2, p.bottom);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function metalTubeGradient(axis, x1, y1, x2, y2) {
+      const g = axis === "v"
+        ? ctx.createLinearGradient(x1 - 6, y1, x1 + 6, y1)
+        : ctx.createLinearGradient(x1, y1 - 6, x1, y1 + 6);
+      g.addColorStop(0, "#f6f8f7");
+      g.addColorStop(0.22, "#dfe5e2");
+      g.addColorStop(0.5, "#9aa6a0");
+      g.addColorStop(0.78, "#6f7a74");
+      g.addColorStop(1, "#c8d0cb");
+      return g;
+    }
+
+    function drawMetalPost(x, y1, y2, radius) {
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.strokeStyle = metalTubeGradient("v", x, y1, x, y2);
+      ctx.lineWidth = radius * 2;
+      ctx.shadowColor = "rgba(0,0,0,0.45)";
+      ctx.shadowBlur = radius * 1.4;
+      ctx.shadowOffsetX = radius * 0.35;
+      ctx.beginPath();
+      ctx.moveTo(x, y1 - radius * 0.35);
+      ctx.lineTo(x, y2 + radius * 0.2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.beginPath();
+      ctx.ellipse(x - radius * 0.28, y1 - radius * 0.1, radius * 0.35, radius * 0.55, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(40,48,44,0.35)";
+      ctx.beginPath();
+      ctx.ellipse(x + radius * 0.32, y2, radius * 0.4, radius * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawMetalCrossbar(x1, x2, y, radius) {
+      ctx.save();
+      ctx.lineCap = "round";
+      ctx.strokeStyle = metalTubeGradient("h", x1, y, x2, y);
+      ctx.lineWidth = radius * 2.05;
+      ctx.shadowColor = "rgba(0,0,0,0.42)";
+      ctx.shadowBlur = radius * 1.2;
+      ctx.shadowOffsetY = radius * 0.4;
+      ctx.beginPath();
+      ctx.moveTo(x1 - radius * 0.2, y);
+      ctx.lineTo(x2 + radius * 0.2, y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.beginPath();
+      ctx.ellipse(x1, y - radius * 0.3, radius * 0.5, radius * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.42)";
+      ctx.beginPath();
+      ctx.ellipse(x2, y - radius * 0.3, radius * 0.5, radius * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    function drawGoalNet() {
+      const p = layout.plot;
+      const inset = layout.postRadius * 0.55;
+      const left = p.left + inset;
+      const right = p.right - inset;
+      const top = p.top + inset * 0.4;
+      const bottom = p.bottom - inset * 0.15;
+      const w = right - left;
+      const h = bottom - top;
+
+      ctx.save();
+      ctx.fillStyle = "rgba(8,22,18,0.22)";
+      ctx.fillRect(left, top, w, h);
+
+      const meshX = Math.max(10, Math.round(w / 28));
+      const meshY = Math.max(6, Math.round(h / 16));
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.lineWidth = 0.9;
+      for (let i = 0; i <= meshX; i += 1) {
+        const x = left + (w * i) / meshX;
+        ctx.beginPath();
+        ctx.moveTo(x, top);
+        ctx.lineTo(x, bottom);
+        ctx.stroke();
+      }
+      for (let j = 0; j <= meshY; j += 1) {
+        const y = top + (h * j) / meshY;
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+        ctx.stroke();
+      }
+
+      ctx.strokeStyle = "rgba(255,255,255,0.12)";
+      ctx.lineWidth = 0.7;
+      for (let i = 0; i < meshX; i += 1) {
+        for (let j = 0; j < meshY; j += 1) {
+          const x0 = left + (w * i) / meshX;
+          const y0 = top + (h * j) / meshY;
+          const x1 = left + (w * (i + 1)) / meshX;
+          const y1 = top + (h * (j + 1)) / meshY;
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x1, y0);
+          ctx.lineTo(x0, y1);
+          ctx.stroke();
+        }
+      }
+      ctx.restore();
+    }
+
+    function drawGoalStructure() {
+      const p = layout.plot;
+      const r = layout.postRadius;
+      const postTop = p.top - r * 0.55;
+      const postBottom = p.bottom + r * 0.25;
+
+      drawMetalPost(p.left, postTop, postBottom, r);
+      drawMetalPost(p.right, postTop, postBottom, r);
+      drawMetalCrossbar(p.left, p.right, p.top, r);
+
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([5, 7]);
+      for (let i = 1; i < 6; i += 1) {
+        const x = p.left + (p.width * i) / 6;
+        ctx.beginPath();
+        ctx.moveTo(x, p.top + r * 0.5);
+        ctx.lineTo(x, p.bottom - r * 0.2);
+        ctx.stroke();
+      }
+      for (let i = 1; i < 3; i += 1) {
+        const y = p.bottom - (p.height * i) / 3;
+        ctx.beginPath();
+        ctx.moveTo(p.left + r * 0.5, y);
+        ctx.lineTo(p.right - r * 0.5, y);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    function drawHeatmap() {
+      const p = layout.plot;
+      const cols = 96;
+      const rows = 38;
+      const cellW = p.width / cols;
+      const cellH = p.height / rows;
+      const values = [];
+      let high = 0;
+      let mid = 0;
+      let low = 0;
+      for (let row = 0; row < rows; row += 1) {
+        const line = [];
+        for (let col = 0; col < cols; col += 1) {
+          const u = (col + 0.5) / cols;
+          const v = 1 - (row + 0.5) / rows;
+          const prob = probabilityAt(u, v);
+          line.push(prob);
+          if (prob >= 0.8) high += 1;
+          if (prob >= 0.5) mid += 1;
+          if (prob >= 0.2) low += 1;
+          ctx.fillStyle = probabilityColor(prob, 0.76);
+          ctx.fillRect(p.left + col * cellW, p.top + row * cellH, cellW + 1, cellH + 1);
+        }
+        values.push(line);
+      }
+      drawContours(values, cols, rows, cellW, cellH);
+      const total = cols * rows;
+      document.getElementById("areaHigh").textContent = `${Math.round((high / total) * 100)}%`;
+      document.getElementById("areaMid").textContent = `${Math.round((mid / total) * 100)}%`;
+      document.getElementById("areaLow").textContent = `${Math.round((low / total) * 100)}%`;
+    }
+
+    function drawContours(values, cols, rows, cellW, cellH) {
+      const thresholds = [
+        { value: 0.8, color: "rgba(255,255,255,0.94)", width: 2.4 },
+        { value: 0.5, color: "rgba(23,32,28,0.78)", width: 1.8 },
+        { value: 0.2, color: "rgba(255,255,255,0.54)", width: 1.2 }
+      ];
+      const p = layout.plot;
+      for (const threshold of thresholds) {
+        ctx.save();
+        ctx.strokeStyle = threshold.color;
+        ctx.lineWidth = threshold.width;
+        ctx.beginPath();
+        for (let row = 0; row < rows; row += 1) {
+          for (let col = 0; col < cols - 1; col += 1) {
+            const a = values[row][col] - threshold.value;
+            const b = values[row][col + 1] - threshold.value;
+            if (a === 0 || a * b < 0) {
+              const x = p.left + (col + 1) * cellW;
+              const y1 = p.top + row * cellH;
+              ctx.moveTo(x, y1);
+              ctx.lineTo(x, y1 + cellH);
+            }
+          }
+        }
+        for (let row = 0; row < rows - 1; row += 1) {
+          for (let col = 0; col < cols; col += 1) {
+            const a = values[row][col] - threshold.value;
+            const b = values[row + 1][col] - threshold.value;
+            if (a === 0 || a * b < 0) {
+              const x1 = p.left + col * cellW;
+              const y = p.top + (row + 1) * cellH;
+              ctx.moveTo(x1, y);
+              ctx.lineTo(x1 + cellW, y);
+            }
+          }
+        }
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    function drawMonteCarloCloud(analysis) {
+      if (!analysis?.samples?.length) return;
+      const sigma = monteCarloSigma();
+      const target = toCanvas(state.targetU, state.targetV);
+      const rx = Math.max(12, sigma.u * layout.plot.width * 2.05);
+      const ry = Math.max(10, sigma.v * layout.plot.height * 2.05);
+      const step = Math.max(1, Math.floor(analysis.samples.length / 240));
+
+      ctx.save();
+      ctx.fillStyle = "rgba(255,255,255,0.08)";
+      ctx.strokeStyle = "rgba(255,255,255,0.52)";
+      ctx.lineWidth = 1.4;
+      ctx.setLineDash([5, 6]);
+      ctx.beginPath();
+      ctx.ellipse(target.x, target.y, rx, ry, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      for (let i = 0; i < analysis.samples.length; i += step) {
+        const sample = analysis.samples[i];
+        const point = toCanvas(sample.u, sample.v);
+        ctx.fillStyle = probabilityColor(sample.p, 0.20);
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, 2.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawOptimalKeeper(analysis) {
+      const opt = analysis?.optimization;
+      if (!opt || !Number.isFinite(opt.u) || !Number.isFinite(opt.v)) return;
+      const current = toCanvas(state.keeperU, state.keeperV);
+      const best = toCanvas(opt.u, opt.v);
+      const visibleGain = opt.improvement > 0.001;
+
+      ctx.save();
+      ctx.strokeStyle = visibleGain ? "rgba(255,255,255,0.92)" : "rgba(255,255,255,0.45)";
+      ctx.fillStyle = visibleGain ? "#0b6b75" : "rgba(95,111,103,0.72)";
+      ctx.lineWidth = 2;
+      ctx.setLineDash([6, 6]);
+      ctx.beginPath();
+      ctx.moveTo(current.x, current.y);
+      ctx.lineTo(best.x, best.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      ctx.beginPath();
+      ctx.moveTo(best.x, best.y - 10);
+      ctx.lineTo(best.x + 10, best.y);
+      ctx.lineTo(best.x, best.y + 10);
+      ctx.lineTo(best.x - 10, best.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.font = "700 12px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "#ffffff";
+      ctx.strokeStyle = "rgba(23,32,28,0.86)";
+      ctx.lineWidth = 3;
+      const label = visibleGain ? `óptimo ${signedPercentagePoints(opt.improvement)}` : "óptimo";
+      const labelX = clamp(best.x + 12, layout.plot.left + 6, layout.plot.right - 116);
+      const labelY = clamp(best.y - 10, layout.plot.top + 18, layout.height - 24);
+      ctx.strokeText(label, labelX, labelY);
+      ctx.fillText(label, labelX, labelY);
+      ctx.restore();
+    }
+
+    function updateDecisionReadout(analysis) {
+      if (!analysis) return;
+      const summary = analysis.summary;
+      const opt = analysis.optimization;
+      document.getElementById("mcMean").textContent = percent(summary.mean);
+      document.getElementById("mcIntervalLabel").textContent = `IC ${Math.round(summary.confidence * 100)}%`;
+      document.getElementById("mcInterval").textContent = `${percent(summary.lower, 1)}-${percent(summary.upper, 1)}`;
+      document.getElementById("mcIntervalWidth").textContent = signedPercentagePoints(summary.upper - summary.lower);
+      document.getElementById("entropyBits").textContent = `${analysis.entropyBits.toFixed(2)} bits`;
+      document.getElementById("bestKeeper").textContent = `U ${opt.u.toFixed(2)} / V ${opt.v.toFixed(2)}`;
+      document.getElementById("bestGain").textContent = signedPercentagePoints(opt.improvement);
+      document.getElementById("gridSearchInfo").textContent = `${opt.evaluated} pos refinadas / ${opt.samplesUsed} MC`;
+      const applyButton = document.getElementById("applyBestKeeperButton");
+      if (applyButton) {
+        applyButton.disabled = opt.improvement <= 0.001;
+      }
+      updateAnalysisVisualizations(analysis);
+    }
+
+    function prepareChartCanvas(canvasElement) {
+      const rect = canvasElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+      const width = Math.max(220, Math.floor(rect.width || 220));
+      const height = Math.max(90, Math.floor(rect.height || 118));
+      canvasElement.width = Math.round(width * dpr);
+      canvasElement.height = Math.round(height * dpr);
+      const chartCtx = canvasElement.getContext("2d");
+      chartCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      chartCtx.clearRect(0, 0, width, height);
+      return { chartCtx, width, height };
+    }
+
+    function drawMonteCarloHistogram(analysis) {
+      const canvasElement = document.getElementById("mcHistogram");
+      if (!canvasElement || !analysis?.samples?.length) return;
+      const { chartCtx, width, height } = prepareChartCanvas(canvasElement);
+      const bins = 14;
+      const counts = new Array(bins).fill(0);
+      for (const sample of analysis.samples) {
+        const idx = Math.min(bins - 1, Math.floor(clamp(sample.p) * bins));
+        counts[idx] += 1;
+      }
+      const maxCount = Math.max(1, ...counts);
+      const pad = 18;
+      const plotW = width - pad * 2;
+      const plotH = height - pad * 1.6;
+      const barW = plotW / bins;
+
+      chartCtx.fillStyle = "#ffffff";
+      chartCtx.fillRect(0, 0, width, height);
+      chartCtx.strokeStyle = "rgba(203,214,209,0.9)";
+      chartCtx.lineWidth = 1;
+      chartCtx.beginPath();
+      chartCtx.moveTo(pad, height - pad);
+      chartCtx.lineTo(width - pad, height - pad);
+      chartCtx.stroke();
+
+      counts.forEach((count, idx) => {
+        const pMid = (idx + 0.5) / bins;
+        const h = (count / maxCount) * plotH;
+        const x = pad + idx * barW + 2;
+        const y = height - pad - h;
+        chartCtx.fillStyle = probabilityColor(pMid, 0.92);
+        chartCtx.fillRect(x, y, Math.max(2, barW - 4), h);
+      });
+
+      chartCtx.fillStyle = "#5f6f67";
+      chartCtx.font = "700 10px Inter, system-ui, sans-serif";
+      chartCtx.fillText("0%", pad, height - 4);
+      chartCtx.fillText("100%", width - pad - 24, height - 4);
+      const meanX = pad + analysis.summary.mean * plotW;
+      chartCtx.strokeStyle = "#17201c";
+      chartCtx.lineWidth = 2;
+      chartCtx.beginPath();
+      chartCtx.moveTo(meanX, 10);
+      chartCtx.lineTo(meanX, height - pad + 3);
+      chartCtx.stroke();
+    }
+
+    function updateEntropyVisualization(analysis) {
+      const entropyFill = document.getElementById("entropyFill");
+      const entropyText = document.getElementById("entropyText");
+      if (entropyFill) {
+        entropyFill.style.width = `${clamp(analysis.entropyBits) * 100}%`;
+      }
+      if (entropyText) {
+        const label = analysis.entropyBits > 0.85
+          ? "Alta incertidumbre: el modelo esta cerca de una decision 50/50."
+          : analysis.entropyBits > 0.45
+            ? "Incertidumbre media: hay señal, pero todavia existe variacion relevante."
+            : "Baja incertidumbre: el modelo esta relativamente decidido para este punto.";
+        entropyText.textContent = label;
+      }
+    }
+
+    function updateOptimizationVisualization(analysis) {
+      const current = clamp(analysis.optimization.currentExpected);
+      const optimal = clamp(analysis.optimization.expected);
+      const currentBar = document.getElementById("currentExpectedBar");
+      const optimalBar = document.getElementById("optimalExpectedBar");
+      const currentValue = document.getElementById("currentExpectedValue");
+      const optimalValue = document.getElementById("optimalExpectedValue");
+      if (currentBar) currentBar.style.width = `${current * 100}%`;
+      if (optimalBar) optimalBar.style.width = `${optimal * 100}%`;
+      if (currentValue) currentValue.textContent = percent(current);
+      if (optimalValue) optimalValue.textContent = percent(optimal);
+    }
+
+    function updateAnalysisVisualizations(analysis) {
+      drawMonteCarloHistogram(analysis);
+      updateEntropyVisualization(analysis);
+      updateOptimizationVisualization(analysis);
+      updateInterpretabilityPanel(analysis);
+    }
+
+    function updateText(id, value) {
+      const element = document.getElementById(id);
+      if (element) element.textContent = value;
+    }
+
+    function modelStatusLabel() {
+      if (state.modelMode !== "ml") return "Simulado";
+      return TRAINED_MODEL.trained_on_synthetic_data ? "Demo" : "Baseline";
+    }
+
+    function interpretationNarrative(analysis) {
+      const p = percent(analysis.targetProb);
+      const mc = percent(analysis.summary.mean);
+      const interval = `${percent(analysis.summary.lower, 1)}-${percent(analysis.summary.upper, 1)}`;
+      const confidence = Math.round(analysis.summary.confidence * 100);
+      const entropy = analysis.entropyBits.toFixed(2);
+      const gain = signedPercentagePoints(analysis.optimization.improvement);
+      if (state.modelMode === "ml") {
+        return `Lectura ML: el objetivo actual tiene P(save)=${p}. Al simular tiros cercanos con Monte Carlo, la probabilidad esperada es ${mc} con IC ${confidence}% de ${interval}. La entropía es ${entropy} bits, así que ${analysis.entropyBits > 0.85 ? "el caso es muy incierto" : "el caso tiene señal utilizable"}. La búsqueda discreta refinada sugiere U=${analysis.optimization.u.toFixed(2)}, V=${analysis.optimization.v.toFixed(2)}, con mejora esperada de ${gain}.`;
+      }
+      return `Lectura geométrica: esta vista no usa coeficientes aprendidos, sino una función de alcance. El punto actual tiene P(save)=${p}; Monte Carlo da ${mc} con IC ${confidence}% de ${interval} y la posición sugerida por búsqueda discreta refinada mejora ${gain}. Úsalo para explicar supuestos físicos, no para afirmar aprendizaje estadístico.`;
+    }
+
+    function renderDriverList(contributions) {
+      const container = document.getElementById("driverList");
+      if (!container) return;
+      container.innerHTML = "";
+      if (state.modelMode !== "ml") {
+        const note = document.createElement("p");
+        note.className = "note";
+        note.textContent = "En el simulador geométrico no hay coeficientes aprendidos; los resultados dependen de alcance, tiempo, reacción y distancia.";
+        container.appendChild(note);
+        return;
+      }
+
+      const top = contributions.slice(0, 6);
+      const maxAbs = Math.max(0.001, ...top.map((row) => row.abs));
+      for (const row of top) {
+        const item = document.createElement("div");
+        item.className = "driver-row";
+
+        const name = document.createElement("div");
+        name.className = "driver-name";
+        name.textContent = row.label;
+
+        const track = document.createElement("div");
+        track.className = "driver-track";
+        const fill = document.createElement("div");
+        fill.className = `driver-fill ${row.contribution >= 0 ? "positive" : "negative"}`;
+        fill.style.width = `${Math.max(6, (row.abs / maxAbs) * 100)}%`;
+        track.appendChild(fill);
+
+        const value = document.createElement("div");
+        value.className = "driver-value";
+        value.textContent = `${row.contribution >= 0 ? "+" : ""}${row.contribution.toFixed(2)}`;
+
+        item.appendChild(name);
+        item.appendChild(track);
+        item.appendChild(value);
+        container.appendChild(item);
+      }
+    }
+
+    function updateInterpretabilityPanel(analysis) {
+      const auc = Number.isFinite(TRAINED_MODEL.metrics?.roc_auc)
+        ? TRAINED_MODEL.metrics.roc_auc.toFixed(3)
+        : "NA";
+      const brier = Number.isFinite(TRAINED_MODEL.metrics?.brier_score)
+        ? TRAINED_MODEL.metrics.brier_score.toFixed(3)
+        : "NA";
+      updateText("modelSourceReadout", state.modelMode === "ml" ? modelSourceLabel() : "Simulador");
+      updateText("modelAucReadout", state.modelMode === "ml" ? auc : "NA");
+      updateText("modelBrierReadout", state.modelMode === "ml" ? brier : "NA");
+      updateText("modelNReadout", state.modelMode === "ml" ? String(TRAINED_MODEL.metrics?.n_total ?? "NA") : "NA");
+      updateText("modelKindReadout", modelKindLabel());
+      updateText("modelStatusReadout", modelStatusLabel());
+      updateText("interpretationNarrative", interpretationNarrative(analysis));
+      renderDriverList(mlFeatureContributions(state.targetU, state.targetV));
+    }
+
+    function syncAlphaButtons() {
+      for (const button of document.querySelectorAll("[data-alpha]")) {
+        button.classList.toggle("active", Math.abs(Number(button.dataset.alpha) - state.ciAlpha) < 1e-9);
+      }
+    }
+
+    function posePoints(offset = { u: 0, v: 0 }, scale = 1) {
+      const h = 0.58 * scale;
+      const hand = 0.105 * scale;
+      const foot = 0.052 * scale;
+      const u = state.keeperU + offset.u;
+      const v = state.keeperV + offset.v;
+      return {
+        left_hand: { u: u - hand, v: v + 0.12 * h },
+        head: { u, v: v + 0.36 * h },
+        right_hand: { u: u + hand, v: v + 0.12 * h },
+        right_foot: { u: u + foot, v: v - 0.33 * h },
+        left_foot: { u: u - foot, v: v - 0.33 * h }
+      };
+    }
+
+    function drawPolygonFromPose(points, fill, stroke, lineWidth = 2) {
+      const order = ["left_hand", "head", "right_hand", "right_foot", "left_foot"];
+      ctx.beginPath();
+      for (let i = 0; i < order.length; i += 1) {
+        const point = toCanvas(points[order[i]].u, points[order[i]].v);
+        if (i === 0) ctx.moveTo(point.x, point.y);
+        else ctx.lineTo(point.x, point.y);
+      }
+      ctx.closePath();
+      if (fill) {
+        ctx.fillStyle = fill;
+        ctx.fill();
+      }
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = lineWidth;
+      ctx.stroke();
+    }
+
+    function drawBall() {
+      const ball = toCanvas(state.ballU, state.ballV);
+      const r = Math.max(6, layout.goalPx.width * 0.018);
+      ctx.save();
+      ctx.fillStyle = "#ffd34d";
+      ctx.strokeStyle = "#17201c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(ball.x, ball.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(23,32,28,0.58)";
+      ctx.lineWidth = 1.1;
+      for (let i = 0; i < 5; i += 1) {
+        const a0 = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const a1 = a0 + Math.PI / 5.2;
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, r * 0.55, a0, a1);
+        ctx.stroke();
+      }
+      ctx.font = "700 11px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "#17201c";
+      ctx.strokeStyle = "rgba(255,255,255,0.82)";
+      ctx.lineWidth = 3;
+      const label = `tiro · ${pitchZoneLabel(state.ballU, state.ballV)}`;
+      ctx.strokeText(label, ball.x + r + 6, ball.y + 4);
+      ctx.fillText(label, ball.x + r + 6, ball.y + 4);
+      ctx.restore();
+    }
+
+    function drawKeeper() {
+      const center = toCanvas(state.keeperU, state.keeperV);
+      const plot = layout.plot;
+      const radiusX = metersToCanvasX(state.reachX) * (state.proxy === "deformable" ? 1 + state.deform * 0.28 : 1);
+      const radiusY = metersToCanvasY(state.reachZ) * (state.proxy === "deformable" ? 1 + state.deform * 0.22 : 1);
+
+      if (state.proxy === "deformable") {
+        const ampU = (state.reachX / GOAL_WIDTH_M) * 0.34 * state.deform;
+        const ampV = (state.reachZ / GOAL_HEIGHT_M) * 0.24 * state.deform;
+        const offsets = [
+          { u: -ampU, v: -ampV * 0.30 },
+          { u: ampU, v: -ampV * 0.30 },
+          { u: -ampU * 0.72, v: ampV },
+          { u: ampU * 0.72, v: ampV },
+          { u: -ampU * 0.62, v: -ampV },
+          { u: ampU * 0.62, v: -ampV }
+        ];
+        for (const offset of offsets) {
+          drawPolygonFromPose(posePoints(offset, 1.12), "rgba(255,255,255,0.05)", "rgba(255,255,255,0.48)", 1.4);
+        }
+      } else {
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(center.x, center.y, radiusX, radiusY, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.86)";
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      drawPolygonFromPose(posePoints(), "rgba(255,255,255,0.28)", "rgba(14,32,28,0.92)", 2.4);
+      ctx.save();
+      ctx.fillStyle = "#f8f4dc";
+      ctx.strokeStyle = "#17201c";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(center.x, center.y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawTarget() {
+      const target = toCanvas(state.targetU, state.targetV);
+      const ball = toCanvas(state.ballU, state.ballV);
+      const keeper = toCanvas(state.keeperU, state.keeperV);
+      const p = probabilityAt(state.targetU, state.targetV);
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,255,255,0.55)";
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(ball.x, ball.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(23,32,28,0.45)";
+      ctx.beginPath();
+      ctx.moveTo(keeper.x, keeper.y);
+      ctx.lineTo(target.x, target.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = p >= 0.8 ? "#1466a8" : p >= 0.5 ? "#24915c" : p >= 0.2 ? "#d49a1f" : "#b6423a";
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.font = "700 13px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "#17201c";
+      ctx.strokeStyle = "rgba(255,255,255,0.9)";
+      ctx.lineWidth = 4;
+      const label = `P(save) ${(p * 100).toFixed(1)}%`;
+      const labelX = clamp(target.x + 14, layout.plot.left + 6, layout.plot.right - 132);
+      const labelY = clamp(target.y - 14, layout.plot.top + 20, layout.plot.bottom - 8);
+      ctx.strokeText(label, labelX, labelY);
+      ctx.fillText(label, labelX, labelY);
+      ctx.restore();
+    }
+
+    function drawTitles() {
+      const x = 22;
+      const y = 34;
+      const compact = layout.width < 520;
+      ctx.save();
+      ctx.font = compact ? "700 18px Inter, system-ui, sans-serif" : "700 22px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(0,0,0,0.28)";
+      const title = compact ? "P(save) por punto de entrada" : "Probabilidad de parada por punto de entrada";
+      ctx.fillText(title, x + 1, y + 1);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(title, x, y);
+      ctx.font = "650 13px Inter, system-ui, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.86)";
+      const sourceLabel = modelSourceLabel();
+      const auc = Number.isFinite(TRAINED_MODEL.metrics?.roc_auc)
+        ? TRAINED_MODEL.metrics.roc_auc.toFixed(2)
+        : "NA";
+      const modeLabel = state.modelMode === "ml"
+        ? `ML ${sourceLabel} | AUC ${auc} | n=${TRAINED_MODEL.metrics?.n_total ?? "NA"}`
+        : "modelo geometrico proxy | no entrenado";
+      ctx.fillText(modeLabel, x, y + 24);
+      ctx.restore();
+    }
+
+    function draw() {
+      if (!layout) computeLayout();
+      const analysis = computeDecisionAnalysis();
+      latestAnalysis = analysis;
+      drawBackground();
+      drawPitchPlayableZone();
+      drawPitchMarkings();
+      drawTitles();
+      drawHeatmap();
+      drawMonteCarloCloud(analysis);
+      drawGoalNet();
+      drawGoalStructure();
+      drawBall();
+      drawKeeper();
+      drawOptimalKeeper(analysis);
+      drawTarget();
+      const p = analysis.targetProb;
+      document.getElementById("targetProb").textContent = `${(p * 100).toFixed(1)}%`;
+      document.getElementById("targetDist").textContent = `${targetDistance().toFixed(2)}m`;
+      updateDecisionReadout(analysis);
+    }
+
+    function updateFromInputs() {
+      for (const id of inputIds) {
+        state[id] = Number(inputs[id].value);
+      }
+      clampActorsToPitchArea();
+      syncInputsFromState();
+      draw();
+    }
+
+    function applyPreset(name) {
+      Object.assign(state, presets[name]);
+      state.scenario = name;
+      state.viewZoom = FIXED_VIEW_ZOOM;
+      clampActorsToPitchArea();
+      syncInputsFromState();
+      draw();
+    }
+
+    function setCanvasPoint(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const uv = fromCanvas(x, y);
+      if (dragMode === "keeper" || dragMode === "ball") {
+        if (dragMode === "keeper") {
+          const clipped = clampKeeperPosition(uv.u, uv.v);
+          state.keeperU = clipped.u;
+          state.keeperV = clipped.v;
+        } else {
+          const clipped = clampToPitchArea(uv.u, uv.v);
+          state.ballU = clipped.u;
+          state.ballV = clipped.v;
+        }
+      } else {
+        state.targetU = clamp(uv.u);
+        state.targetV = clamp(uv.v);
+      }
+      syncInputsFromState();
+      draw();
+    }
+
+    function nearestControl(event) {
+      const rect = canvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      const keeper = toCanvas(state.keeperU, state.keeperV);
+      const ball = toCanvas(state.ballU, state.ballV);
+      const target = toCanvas(state.targetU, state.targetV);
+      const keeperDist = Math.hypot(x - keeper.x, y - keeper.y);
+      const ballDist = Math.hypot(x - ball.x, y - ball.y);
+      const targetDistValue = Math.hypot(x - target.x, y - target.y);
+      const nearest = [
+        { mode: "keeper", dist: keeperDist },
+        { mode: "ball", dist: ballDist },
+        { mode: "target", dist: targetDistValue }
+      ].sort((a, b) => a.dist - b.dist)[0];
+      const threshold = nearest.mode === "ball" ? 22 : 34;
+      return nearest.dist < threshold ? nearest.mode : "target";
+    }
+
+    function exportState() {
+      const analysis = latestAnalysis || computeDecisionAnalysis();
+      const sample = {
+        model_type: state.modelMode === "ml" ? "logistic_regression" : "interactive_geometry_proxy",
+        model_source: state.modelMode === "ml" ? TRAINED_MODEL.source : "geometry_proxy",
+        trained_on_synthetic_data: state.modelMode === "ml" ? TRAINED_MODEL.trained_on_synthetic_data : true,
+        p_save_target: analysis.targetProb,
+        p_save_entropy_bits: analysis.entropyBits,
+        monte_carlo_samples: analysis.samples.length,
+        monte_carlo_alpha: analysis.summary.alpha,
+        monte_carlo_confidence: analysis.summary.confidence,
+        monte_carlo_p_mean: analysis.summary.mean,
+        monte_carlo_lower_quantile: analysis.summary.lowerQ,
+        monte_carlo_upper_quantile: analysis.summary.upperQ,
+        monte_carlo_p_lower: analysis.summary.lower,
+        monte_carlo_p_upper: analysis.summary.upper,
+        optimal_keeper_u: analysis.optimization.u,
+        optimal_keeper_v: analysis.optimization.v,
+        optimal_expected_p_save: analysis.optimization.expected,
+        current_expected_p_save: analysis.optimization.currentExpected,
+        optimal_improvement_pp: analysis.optimization.improvement * 100,
+        optimization_method: analysis.optimization.method,
+        optimization_positions_evaluated: analysis.optimization.evaluated,
+        ml_top_feature_contributions: state.modelMode === "ml"
+          ? mlFeatureContributions(state.targetU, state.targetV).slice(0, 10)
+          : [],
+        ball_position_u: state.ballU,
+        ball_position_v: state.ballV,
+        goal_entry_u: state.targetU,
+        goal_entry_v: state.targetV,
+        keeper_center_u: state.keeperU,
+        keeper_center_v: state.keeperV,
+        keeper_outside_goal: keeperOutsideGoal(),
+        keeper_reach_x_m: state.reachX,
+        keeper_reach_z_m: state.reachZ,
+        time_ball_to_goal: state.ballTime,
+        reaction_time: state.reaction,
+        shot_speed_kmh: state.shotSpeed,
+        deformation_factor: state.deform,
+        uncertainty: state.uncertainty,
+        proxy_mode: state.proxy,
+        view_zoom: state.viewZoom,
+        feature_vector: featureMapForPoint(state.targetU, state.targetV)
+      };
+      const blob = new Blob([JSON.stringify(sample, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = "keeper_probability_demo_state.json";
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    for (const input of Object.values(inputs)) {
+      input.addEventListener("input", updateFromInputs);
+    }
+
+    document.getElementById("scenarioButtons").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-scenario]");
+      if (!button) return;
+      applyPreset(button.dataset.scenario);
+    });
+
+    document.querySelectorAll("[data-proxy]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.proxy = button.dataset.proxy;
+        syncInputsFromState();
+        draw();
+      });
+    });
+
+    document.querySelectorAll("[data-model-mode]").forEach((button) => {
+      button.addEventListener("click", () => {
+        state.modelMode = button.dataset.modelMode;
+        clampActorsToPitchArea();
+        syncInputsFromState();
+        draw();
+      });
+    });
+
+    document.getElementById("alphaButtons").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-alpha]");
+      if (!button) return;
+      state.ciAlpha = Number(button.dataset.alpha);
+      syncInputsFromState();
+      draw();
+    });
+
+    document.getElementById("resetButton").addEventListener("click", () => applyPreset("balanced"));
+    document.getElementById("exportButton").addEventListener("click", exportState);
+    document.getElementById("applyBestKeeperButton").addEventListener("click", () => {
+      const analysis = latestAnalysis || computeDecisionAnalysis();
+      if (!analysis?.optimization) return;
+      state.keeperU = analysis.optimization.u;
+      state.keeperV = analysis.optimization.v;
+      clampActorsToPitchArea();
+      syncInputsFromState();
+      draw();
+    });
+    document.getElementById("refreshAnalysisButton").addEventListener("click", draw);
+
+    canvas.addEventListener("pointerdown", (event) => {
+      dragMode = nearestControl(event);
+      canvas.setPointerCapture(event.pointerId);
+      setCanvasPoint(event);
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (dragMode) setCanvasPoint(event);
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      dragMode = null;
+      canvas.releasePointerCapture(event.pointerId);
+    });
+
+    canvas.addEventListener("pointercancel", () => {
+      dragMode = null;
+    });
+
+    new ResizeObserver(() => {
+      computeLayout();
+      draw();
+    }).observe(shell);
+
+    async function loadTrainedModel() {
+      try {
+        const response = await fetch("save_probability_model.json", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json();
+        if (Array.isArray(payload.feature_columns) && payload.feature_columns.length > 0) {
+          TRAINED_MODEL = payload;
+          const mlButton = document.querySelector('[data-model-mode="ml"]');
+          if (mlButton) {
+            mlButton.textContent = TRAINED_MODEL.trained_on_synthetic_data ? "Baseline ML (demo)" : "Baseline ML (PFF)";
+          }
+          const note = document.getElementById("modelNote");
+          if (note) {
+            const sourceLabel = modelSourceLabel();
+            const auc = Number.isFinite(TRAINED_MODEL.metrics?.roc_auc)
+              ? TRAINED_MODEL.metrics.roc_auc.toFixed(3)
+              : "NA";
+            const brier = Number.isFinite(TRAINED_MODEL.metrics?.brier_score)
+              ? TRAINED_MODEL.metrics.brier_score.toFixed(3)
+              : "NA";
+            note.textContent = `Modelo cargado: ${sourceLabel}. n=${TRAINED_MODEL.metrics?.n_total ?? "NA"}, AUC=${auc}, Brier=${brier}. Compara contra el simulador geometrico para separar aprendizaje estadistico de supuestos fisicos.`;
+          }
+        }
+      } catch (_) {
+        /* file:// or offline: keep embedded fallback */
+      }
+    }
+
+    loadTrainedModel().finally(() => {
+      state.viewZoom = FIXED_VIEW_ZOOM;
+      clampActorsToPitchArea();
+      syncInputsFromState();
+      computeLayout();
+      draw();
+    });
+  </script>
+</body>
+</html>

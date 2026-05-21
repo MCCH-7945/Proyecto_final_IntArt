@@ -31,6 +31,7 @@ try:
     from .pitch_geometry import add_event_inside_penalty_area_column
     from .trajectory import estimate_ball_velocity, smooth_ball_trajectory
     from .video_annotation import annotate_video, save_review_frames
+    from .video_source import download_video_url, is_url
 except ImportError:  # pragma: no cover - allows `python src/shot_detector.py`
     from ball_tracking import VideoOpenError, detect_ball_positions
     from goal_mapping import (
@@ -53,6 +54,7 @@ except ImportError:  # pragma: no cover - allows `python src/shot_detector.py`
     from pitch_geometry import add_event_inside_penalty_area_column
     from trajectory import estimate_ball_velocity, smooth_ball_trajectory
     from video_annotation import annotate_video, save_review_frames
+    from video_source import download_video_url, is_url
 
 
 def _finite_series(series: pd.Series) -> pd.Series:
@@ -422,6 +424,9 @@ def build_shot_level_row(
 
     shot_x = _value_or_none(row.get("ball_x_smooth", row.get("ball_x")))
     shot_y = _value_or_none(row.get("ball_y_smooth", row.get("ball_y")))
+    total_frames = int(len(frame_df))
+    valid_ball_detections = int(frame_df["ball_detected"].fillna(False).sum()) if "ball_detected" in frame_df.columns else 0
+    ball_detection_rate = valid_ball_detections / total_frames if total_frames > 0 else None
 
     entry_x = goal_entry.get("goal_entry_x_px")
     entry_y = goal_entry.get("goal_entry_y_px")
@@ -456,6 +461,11 @@ def build_shot_level_row(
         "shot_ball_vx": _value_or_none(row.get("ball_vx")),
         "shot_ball_vy": _value_or_none(row.get("ball_vy")),
         "shot_ball_speed": _value_or_none(row.get("ball_speed")),
+        "shot_ball_confidence": _value_or_none(row.get("ball_confidence")),
+        "tracking_quality": _value_or_none(row.get("tracking_quality")),
+        "ball_detection_rate": ball_detection_rate,
+        "valid_ball_detections": valid_ball_detections,
+        "total_frames": total_frames,
         "inside_penalty_area": _value_or_none(row.get("inside_penalty_area")),
         "play_end_frame": _value_or_none(play_end_frame),
         "play_end_time_sec": _value_or_none(play_end_event.get("play_end_time_sec")),
@@ -476,6 +486,9 @@ def build_shot_level_row(
         "goal_zone_vertical": zones["goal_zone_vertical"],
         "goal_entry_confidence": entry_confidence,
         "shot_confidence": float(shot_result.get("shot_confidence") or 0.0),
+        "keeper_pose_confidence_at_shot": None,
+        "keeper_polygon_confidence_at_shot": None,
+        "pose_valid_points_count_at_shot": None,
         "pre_shot_start_frame": max(0, int(shot_frame) - window_frames),
         "pre_shot_end_frame": int(shot_frame),
         "post_shot_start_frame": int(shot_frame),
@@ -622,7 +635,24 @@ def run_pipeline(
 
 def build_arg_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Detect 1v1 football shots and goal-entry coordinates.")
-    parser.add_argument("--video", required=True, help="Input video path.")
+    parser.add_argument("--video", default=None, help="Input local video path. HTTP(S) URLs are also accepted.")
+    parser.add_argument("--video-url", default=None, help="Input video URL to download before processing.")
+    parser.add_argument("--url-cache-dir", default="data/raw_videos/url_cache", help="Directory used to cache downloaded URLs.")
+    parser.add_argument("--force-download", action="store_true", help="Download URL videos again even if cached.")
+    parser.add_argument(
+        "--cookies-from-browser",
+        default=None,
+        help="Load cookies from a browser for yt-dlp, e.g. chrome, safari, firefox, or 'chrome:Profile 1'.",
+    )
+    parser.add_argument("--cookies-file", default=None, help="Netscape cookies.txt file for yt-dlp.")
+    parser.add_argument("--sleep-interval", type=float, default=0.0, help="Seconds yt-dlp sleeps before each URL download.")
+    parser.add_argument("--sleep-requests", type=float, default=0.0, help="Seconds yt-dlp sleeps between internal HTTP requests.")
+    parser.add_argument(
+        "--max-sleep-interval",
+        type=float,
+        default=None,
+        help="Optional upper bound for randomized yt-dlp sleep; use with --sleep-interval.",
+    )
     parser.add_argument("--model", default=None, help="YOLO ball detector model path.")
     parser.add_argument("--config", default=None, help="Pitch/goal configuration JSON path.")
     parser.add_argument("--frame-output", required=True, help="Frame-level CSV output path.")
@@ -636,9 +666,29 @@ def build_arg_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_arg_parser().parse_args(argv)
+    parser = build_arg_parser()
+    args = parser.parse_args(argv)
+    if not args.video and not args.video_url:
+        parser.error("one of --video or --video-url is required")
+    if args.video and args.video_url:
+        parser.error("use either --video or --video-url, not both")
+
+    video_input = args.video_url or args.video
+    video_path = video_input
+    if is_url(video_input):
+        video_path = download_video_url(
+            video_input,
+            args.url_cache_dir,
+            force=args.force_download,
+            cookies_from_browser=args.cookies_from_browser,
+            cookies_file=args.cookies_file,
+            sleep_interval=args.sleep_interval,
+            max_sleep_interval=args.max_sleep_interval,
+            sleep_requests=args.sleep_requests,
+        )
+
     result = run_pipeline(
-        video_path=args.video,
+        video_path=video_path,
         model_path=args.model,
         config_path=args.config,
         frame_output=args.frame_output,

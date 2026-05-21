@@ -1,0 +1,12 @@
+# YOLO dataset config for the ball detector.
+# Single class: ball (0)
+
+path: data/ball_dataset
+train: images/train
+val: images/val
+test: images/test
+
+nc: 1
+names:
+  0: ball
+

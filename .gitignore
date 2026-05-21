@@ -9,6 +9,14 @@ venv/
 env/
 
 data/raw_videos/*
+!data/raw_videos/video_urls_example.txt
+data/*.zip
+data/pff_worldcup_2022/*
+data/statsbomb_open_data/*
+data/raw_frames/*
+data/frames_to_annotate/*
+data/ball_dataset/images/*
+data/ball_dataset/labels/*
 data/processed/*
 data/annotations/*
 data/outputs/*
@@ -16,8 +24,13 @@ outputs/frame_level/*
 outputs/shot_level/*
 outputs/annotated_videos/*
 outputs/review_frames/*
+outputs/model_reports/*
+outputs/*.csv
+outputs/*.json
 models/ball_detector/*
 models/pose_detector/*
+models/save_probability/*.pkl
+runs/
 
 !.gitkeep
-
+!data/ball_dataset/data.yaml

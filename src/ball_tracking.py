@@ -36,14 +36,17 @@ def get_video_metadata(video_path: str | Path) -> dict[str, Any]:
 def _load_yolo_model(model_path: str | Path | None):
     if not model_path:
         return None, "Ball model path missing."
-    if not Path(model_path).exists():
+    model_ref = str(model_path)
+    model_file = Path(model_ref)
+    can_be_ultralytics_alias = model_file.parent == Path(".") and model_file.suffix == ".pt" and model_file.name.startswith("yolo")
+    if not model_file.exists() and not can_be_ultralytics_alias:
         return None, "Ball model file missing."
     try:
         from ultralytics import YOLO
     except Exception as exc:
         return None, f"ultralytics could not be imported: {exc}"
     try:
-        return YOLO(str(model_path)), None
+        return YOLO(model_ref), None
     except Exception as exc:
         return None, f"Ball model could not be loaded: {exc}"
 

@@ -8,4 +8,8 @@ matplotlib
 tqdm
 jsonschema
 pytest
-
+yt-dlp
+pyyaml
+Pillow
+seaborn
+scikit-learn

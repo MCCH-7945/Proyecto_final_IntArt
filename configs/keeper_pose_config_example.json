@@ -1,0 +1,28 @@
+{
+  "pose_window": {
+    "pre_shot_frames": 30,
+    "post_shot_frames": 30,
+    "use_play_end_frame_when_available": true
+  },
+  "body_points": [
+    "head",
+    "left_hand",
+    "right_hand",
+    "left_foot",
+    "right_foot"
+  ],
+  "polygon_order": [
+    "left_hand",
+    "head",
+    "right_hand",
+    "right_foot",
+    "left_foot"
+  ],
+  "normalization": {
+    "reference": "goal_homography",
+    "keep_out_of_goal_range_values": true
+  },
+  "minimum_point_confidence": 0.25,
+  "minimum_valid_points_for_polygon": 5
+}
+
